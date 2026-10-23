@@ -1,0 +1,16 @@
+{
+  "name": "wheeltec-webssh",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser SSH console for Wheeltec / Jetson device",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ssh2": "^1.16.0",
+    "ws": "^8.18.0"
+  }
+}

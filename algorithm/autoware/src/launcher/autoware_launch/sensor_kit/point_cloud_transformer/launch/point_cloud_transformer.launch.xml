@@ -1,0 +1,8 @@
+<launch>
+  <group>
+    <node pkg="point_cloud_transformer" exec="point_cloud_transformer_node" output="screen">
+    </node>
+
+  </group>
+</launch>
+

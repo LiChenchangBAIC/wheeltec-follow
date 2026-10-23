@@ -1,0 +1,14 @@
+{
+  "updated_at": "2026-10-22 21:56:46",
+  "status": "done",
+  "step_index": 6,
+  "total_steps": 6,
+  "step_name": "\u5168\u90e8\u5b8c\u6210",
+  "detail": "\u7b97\u6cd5\u6e90\u7801\u5df2\u5c31\u7eea\uff0c\u7528\u65f6 133s",
+  "percent": 100,
+  "elapsed_sec": 133,
+  "eta_sec": 0,
+  "local_bytes": 99934208,
+  "speed_bps": 751385,
+  "done": true
+}

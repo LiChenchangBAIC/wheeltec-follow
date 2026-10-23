@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wheeltec Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="bg-glow" aria-hidden="true"></div>
+
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <p class="brand-name">Wheeltec</p>
+            <p class="brand-sub">设备控制台</p>
+          </div>
+        </div>
+        <div class="session-meta" id="sessionMeta" hidden>
+          <span id="sessionLabel"></span>
+          <button type="button" class="btn ghost" id="disconnectBtn">全部断开</button>
+        </div>
+      </header>
+
+      <section class="login-panel" id="loginPanel">
+        <div class="login-copy">
+          <h1>登录设备</h1>
+          <p>通过浏览器 SSH 连接到局域网中的 Wheeltec / Jetson。</p>
+          <div class="lan-portal" id="lanPortal">
+            <p class="lan-kicker">同一网络门户</p>
+            <p class="lan-hint" id="lanHint">正在读取本机地址…</p>
+            <div class="lan-links" id="lanLinks"></div>
+          </div>
+        </div>
+
+        <form class="login-form" id="loginForm" autocomplete="on">
+          <label>
+            <span>主机</span>
+            <input id="host" name="host" type="text" required placeholder="192.168.0.105" />
+          </label>
+          <label>
+            <span>端口</span>
+            <input id="port" name="port" type="number" min="1" max="65535" value="22" required />
+          </label>
+          <label>
+            <span>用户名</span>
+            <input id="username" name="username" type="text" required autocomplete="username" />
+          </label>
+          <label>
+            <span>密码</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autocomplete="current-password"
+            />
+          </label>
+          <label class="remember">
+            <input id="remember" type="checkbox" />
+            <span>在本机记住主机与用户名</span>
+          </label>
+          <button type="submit" class="btn primary" id="connectBtn">进入终端</button>
+          <p class="form-status" id="formStatus" role="status"></p>
+        </form>
+      </section>
+
+      <section class="term-panel" id="termPanel" hidden>
+        <div class="term-tabs">
+          <div class="tab-bar" id="tabBar"></div>
+          <button type="button" class="btn ghost small" id="newTabBtn">新终端</button>
+        </div>
+        <div class="term-host" id="termHost"></div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

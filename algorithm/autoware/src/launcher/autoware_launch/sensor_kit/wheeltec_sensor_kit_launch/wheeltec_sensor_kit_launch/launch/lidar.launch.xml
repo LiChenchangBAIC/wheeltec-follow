@@ -1,0 +1,60 @@
+<launch>
+  <arg name="launch_driver" default="true"/>
+  <arg name="host_ip" default="192.168.1.10"/>
+  <arg name="use_concat_filter" default="true"/>
+  <arg name="vehicle_id" default="$(env VEHICLE_ID default)"/>
+  <!--<arg name="vehicle_mirror_param_file"/>-->
+  <arg name="pointcloud_container_name" default="pointcloud_container"/>
+
+  <group>
+    <push-ros-namespace namespace="lidar"/>
+
+    <group>
+      <push-ros-namespace namespace="top"/>
+ <!--     <include file="$(find-pkg-share common_sensor_launch)/launch/velodyne_VLS128.launch.xml">
+        <arg name="max_range" value="250.0"/>
+        <arg name="sensor_frame" value="velodyne_top"/>
+        <arg name="sensor_ip" value="192.168.1.201"/>
+        <arg name="host_ip" value="$(var host_ip)"/>
+        <arg name="data_port" value="2368"/>
+        <arg name="scan_phase" value="300.0"/>
+        <arg name="launch_driver" value="$(var launch_driver)"/>
+        <arg name="vehicle_mirror_param_file" value="$(var vehicle_mirror_param_file)"/>
+        <arg name="container_name" value="pointcloud_container"/>
+      </include>-->
+    <!-- add wheeltec lidar-->
+        <include file="$(find-pkg-share common_wheeltec_sensor_launch)/launch/lslidar_cx_launch.py">
+        </include>
+<!--         <include file="$(find-pkg-share point_cloud_transformer)/launch/point_cloud_transformer.launch.py">
+        </include> -->
+          <!-- WHEELTEC -->
+  <include file="$(find-pkg-share point_cloud_transformer)/launch/point_cloud_transformer.launch.xml">
+  </include>  
+<!-- 
+    <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud0"/>
+  <arg name="input/twist" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+  <arg name="input/imu" default="/sensing/imu/imu_data"/>
+  <arg name="output/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
+
+  <!- - Parameter - ->
+  <arg name="param_file" default="$(find-pkg-share autoware_pointcloud_preprocessor)/config/distortion_corrector_node.param.yaml"/>
+  <node pkg="autoware_pointcloud_preprocessor" exec="distortion_corrector_node" name="distortion_corrector_node" output="screen">
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/input/twist" to="$(var input/twist)"/>
+    <remap from="~/input/imu" to="$(var input/imu)"/>
+    <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+    <param from="$(var param_file)"/>
+  </node> -->
+
+    </group>
+
+
+
+ <!--     <include file="$(find-pkg-share wheeltec_sensor_kit_launch)/launch/pointcloud_preprocessor.launch.py">
+      <arg name="base_frame" value="base_link"/>
+      <arg name="use_intra_process" value="true"/>
+      <arg name="use_multithread" value="true"/>
+      <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"/>
+    </include>-->
+  </group>
+</launch>

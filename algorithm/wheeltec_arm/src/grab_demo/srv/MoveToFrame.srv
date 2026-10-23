@@ -1,0 +1,11 @@
+string target_frame
+string reference_frame
+float64 offset_x
+float64 offset_y
+float64 offset_z
+bool keep_current_orientation
+float64 velocity_scale
+float64 acceleration_scale
+---
+bool success
+string message

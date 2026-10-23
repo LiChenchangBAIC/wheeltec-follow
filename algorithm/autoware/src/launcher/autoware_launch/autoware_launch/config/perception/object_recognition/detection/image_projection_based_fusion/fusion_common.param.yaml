@@ -1,0 +1,37 @@
+/**:
+  ros__parameters:
+    # Example of lidar and camera timestamps
+    # cloud timestamp: 0.009
+    # rois timestamp: 0.107, 0.156, 0.087, 0.071, 0.124, 0.141
+    # rois_timestamp_offsets: [0.098, 0.147, 0.078, 0.062, 0.115, 0.132]
+    rois_timestamp_offsets: [2.98, 2.147, 2.078, 2.062, 2.115, 2.132]  #wheeltec delay
+    rois_timeout_sec: 2.1  #wheeltec
+    msg3d_timeout_sec: 2.1   #wheeltec
+    image_buffer_size: 15
+    # projection setting for each ROI whether unrectify image
+    point_project_to_unrectified_image: [false, false, false, false, false, false] #wheeltec
+    filter_scope_min_x: -100.0
+    filter_scope_min_y: -100.0
+    filter_scope_min_z: -100.0
+    filter_scope_max_x: 100.0
+    filter_scope_max_y: 100.0
+    filter_scope_max_z: 100.0
+
+    # camera cache setting for each ROI
+    approximate_camera_projection: [true, true, true, true, true, true]
+    # grid size in pixels
+    approximation_grid_cell_width: 1.0
+    approximation_grid_cell_height: 1.0
+
+    # debug parameters
+    debug_mode: true
+    collector_debug_mode: true
+    publish_processing_time_detail: true
+
+    publish_previous_but_late_output_msg: false
+    rosbag_length: 10.0
+    # matching strategy
+    matching_strategy:
+      type: advanced
+      msg3d_noise_window: 0.02
+      rois_timestamp_noise_window: [2.21, 2.21, 2.21, 2.21, 2.21, 2.21]   #wheeltec delay

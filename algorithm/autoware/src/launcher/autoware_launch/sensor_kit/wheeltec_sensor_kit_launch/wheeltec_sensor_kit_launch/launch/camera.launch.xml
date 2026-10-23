@@ -1,0 +1,49 @@
+<launch>
+  <arg name="launch_driver" default="true"/>
+  <arg name="camera_type" default="left"/>
+
+  <group>
+    <push-ros-namespace namespace="camera"/>
+    <group>
+      <push-ros-namespace namespace="/"/>
+
+    <include file="$(find-pkg-share common_wheeltec_sensor_launch)/launch/astra.launch.xml"/>
+
+      <!-- (usb_cam_node is assumed to have launched on logging PC) -->
+<!--       <node pkg="topic_tools" exec="relay" name="tl_camerainfo_relay" output="log">
+        <param name="input_topic" value="/camera/color/camera_info"/>
+        <param name="output_topic" value="/sensing/camera/camera0/camera_info"/>
+        <param name="type" value="sensor_msgs/msg/CameraInfo"/>
+        <param name="reliability" value="best_effort"/>
+      </node> -->
+
+<!--       <node pkg="topic_tools" exec="relay" name="tl_image_relay" output="log">
+        <param name="input_topic" value="/camera/color/image_raw"/>
+        <param name="output_topic" value="/sensing/camera/camera0/image_rect_color"/>
+        <param name="type" value="sensor_msgs/msg/Image"/>
+        <param name="reliability" value="best_effort"/>
+      </node> -->
+    </group>
+    <!-- wheeltec_pjl 20260703 autoware_senior_akm-->
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="base_link_camera" args="-0.168563 0.404608 -0.272737 -0.102806 -0.104443 0.066045 base_link camera_link"/> 
+
+<!--     <group>
+      <push-ros-namespace namespace="traffic_light"/>
+
+      <! - - (usb_cam_node is assumed to have launched on logging PC) - ->
+      <node pkg="topic_tools" exec="relay" name="tl_camera_info_relay" output="log">
+        <param name="input_topic" value="$(var camera_type)/camera_info"/>
+        <param name="output_topic" value="camera_info"/>
+        <param name="type" value="sensor_msgs/msg/CameraInfo"/>
+        <param name="reliability" value="best_effort"/>
+      </node>
+
+      <node pkg="topic_tools" exec="relay" name="tl_compressed_image_relay" output="log">
+        <param name="input_topic" value="$(var camera_type)/image_raw/compressed"/>
+        <param name="output_topic" value="image_raw/compressed"/>
+        <param name="type" value="sensor_msgs/msg/CompressedImage"/>
+        <param name="reliability" value="best_effort"/>
+      </node>
+    </group> -->
+  </group>
+</launch>

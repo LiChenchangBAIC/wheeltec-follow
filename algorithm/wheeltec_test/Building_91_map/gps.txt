@@ -1,0 +1,3 @@
+latitude: 22.96962484
+longitude: 113.90466287
+altitude: 20.622

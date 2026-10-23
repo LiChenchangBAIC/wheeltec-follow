@@ -1,0 +1,13 @@
+colors:
+  green:
+    hsv_ranges:
+      - [73, 113, 148, 84, 255, 255]
+    min_area: 500
+    max_objects: 3
+    sample_count: 3773
+  yellow:
+    hsv_ranges:
+      - [22, 86, 204, 36, 255, 255]
+    min_area: 500
+    max_objects: 3
+    sample_count: 2838

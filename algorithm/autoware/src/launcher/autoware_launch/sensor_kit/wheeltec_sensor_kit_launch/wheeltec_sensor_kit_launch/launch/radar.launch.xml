@@ -1,0 +1,16 @@
+<launch>
+  <group>
+    <push-ros-namespace namespace="radar"/>
+    <group>
+
+    <include file="$(find-pkg-share common_wheeltec_sensor_launch)/launch/radar_launch.py"/>
+
+    <include file="$(find-pkg-share autoware_radar_tracks_msgs_converter)/launch/radar_tracks_msgs_converter.launch.xml">
+        <arg name="input/radar_objects" value="/radartrack"/>
+        <arg name="output/radar_detected_objects" value="/sensing/radar/detected_objects"/>
+        <arg name="output/radar_tracked_objects" value="/sensing/radar/tracked_objects"/>
+    </include>
+
+    </group>
+  </group>
+</launch>

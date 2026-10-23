@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>算法同步进度</title>
+    <style>
+      :root {
+        --bg: #0f1412;
+        --panel: #1c2620;
+        --line: #2d3b33;
+        --text: #e7efe8;
+        --muted: #8fa094;
+        --accent: #c4f542;
+        --accent2: #3dd6c6;
+        --danger: #ff6b5a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+        padding: 24px;
+      }
+      .card {
+        width: min(560px, 96vw);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 28px 24px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 1.35rem;
+        letter-spacing: 0.02em;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-bottom: 22px;
+      }
+      .bar-wrap {
+        height: 18px;
+        border-radius: 999px;
+        background: #0b100e;
+        border: 1px solid var(--line);
+        overflow: hidden;
+      }
+      .bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--accent2), var(--accent));
+        transition: width 0.35s ease;
+      }
+      .pct {
+        margin-top: 10px;
+        font-size: 1.8rem;
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .meta {
+        margin-top: 18px;
+        display: grid;
+        gap: 8px;
+        font-size: 0.9rem;
+      }
+      .meta div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px dashed var(--line);
+        padding-bottom: 6px;
+      }
+      .meta span:last-child {
+        color: var(--muted);
+        text-align: right;
+      }
+      .status-ok { color: var(--accent); }
+      .status-run { color: var(--accent2); }
+      .status-err { color: var(--danger); }
+      .hint {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>算法同步进度</h1>
+      <p class="sub">从 192.168.0.105 拉取到本地 algorithm/</p>
+      <div class="bar-wrap"><div class="bar" id="bar"></div></div>
+      <div class="pct" id="pct">—</div>
+      <div class="meta">
+        <div><span>状态</span><span id="status">等待 progress.json…</span></div>
+        <div><span>当前步骤</span><span id="step">—</span></div>
+        <div><span>详情</span><span id="detail">—</span></div>
+        <div><span>已用时</span><span id="elapsed">—</span></div>
+        <div><span>预计剩余</span><span id="eta">—</span></div>
+        <div><span>已下载</span><span id="size">—</span></div>
+        <div><span>速度</span><span id="speed">—</span></div>
+        <div><span>更新于</span><span id="updated">—</span></div>
+      </div>
+      <p class="hint">
+        本页每秒自动刷新。请用本地静态服务打开（不要用 file://），或直接打开根目录的
+        <code>同步进度.html</code>。
+      </p>
+    </div>
+    <script>
+      function fmtBytes(n) {
+        if (n == null || n < 0) return "—";
+        const u = ["B", "KB", "MB", "GB"];
+        let i = 0;
+        let x = Number(n);
+        while (x >= 1024 && i < u.length - 1) {
+          x /= 1024;
+          i++;
+        }
+        return x.toFixed(i === 0 ? 0 : 1) + " " + u[i];
+      }
+      function fmtSec(s) {
+        if (s == null || s < 0) return "估算中…";
+        if (s < 60) return s + " 秒";
+        if (s < 3600) return Math.floor(s / 60) + " 分 " + (s % 60) + " 秒";
+        return Math.floor(s / 3600) + " 小时 " + Math.floor((s % 3600) / 60) + " 分";
+      }
+      async function tick() {
+        try {
+          const res = await fetch("./progress.json?t=" + Date.now(), { cache: "no-store" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const p = await res.json();
+          const pct = Math.max(0, Math.min(100, Number(p.percent) || 0));
+          document.getElementById("bar").style.width = pct + "%";
+          document.getElementById("pct").textContent = pct + "%";
+          const st = document.getElementById("status");
+          st.textContent = p.status || "—";
+          st.className =
+            p.status === "done"
+              ? "status-ok"
+              : p.status === "error"
+                ? "status-err"
+                : "status-run";
+          document.getElementById("step").textContent =
+            (p.step_name || "—") +
+            (p.step_index ? `  (${p.step_index}/${p.total_steps})` : "");
+          document.getElementById("detail").textContent = p.detail || "—";
+          document.getElementById("elapsed").textContent = fmtSec(p.elapsed_sec);
+          document.getElementById("eta").textContent = p.done
+            ? "已完成"
+            : fmtSec(p.eta_sec);
+          document.getElementById("size").textContent = fmtBytes(p.local_bytes);
+          document.getElementById("speed").textContent =
+            fmtBytes(p.speed_bps) + "/s";
+          document.getElementById("updated").textContent = p.updated_at || "—";
+          if (p.done) document.title = "同步完成 ✓";
+        } catch (e) {
+          document.getElementById("status").textContent =
+            "读取进度失败（请确认已启动同步，并用 http 打开本页）";
+          document.getElementById("status").className = "status-err";
+        }
+      }
+      tick();
+      setInterval(tick, 1000);
+    </script>
+  </body>
+</html>

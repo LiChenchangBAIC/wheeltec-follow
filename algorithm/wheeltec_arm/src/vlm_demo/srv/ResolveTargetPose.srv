@@ -1,0 +1,15 @@
+# ===== Request =====
+int32  u                # 目标像素 u(来自 GroundTargets.grasp_u)
+int32  v                # 目标像素 v
+string target_label     # 目标名称,用于生成帧名
+string frame_id_hint    # 期望的 TF 帧名(空则用默认 vlm_target_frame)
+---
+# ===== Response =====
+bool   success
+string message
+string target_frame             # 实际广播的 TF 帧名
+geometry_msgs/PoseStamped target_pose  # 相机系下目标位姿
+float32 depth_m                 # 目标深度(米)
+float32 camera_x
+float32 camera_y
+float32 camera_z

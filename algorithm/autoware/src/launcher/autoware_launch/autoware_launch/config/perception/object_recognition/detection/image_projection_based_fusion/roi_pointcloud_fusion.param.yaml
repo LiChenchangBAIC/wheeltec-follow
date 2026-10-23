@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    fuse_unknown_only: false   #wheeltec
+    min_cluster_size: 2
+    max_cluster_size: 2000   #wheeltec try
+    cluster_2d_tolerance: 0.5
+    roi_scale_factor: 1.0

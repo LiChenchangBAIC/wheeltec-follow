@@ -1,0 +1,51 @@
+<launch>
+  <arg name="launch_driver" default="true"/>
+  <arg name="gnss_receiver" default="nmea" description="ublox(default) or septentrio"/>
+  <arg name="dual_gnss" default="false"/>
+
+  <group>
+    <push-ros-namespace namespace="gnss"/>
+
+    <!-- Switch topic name -->
+    <let name="navsatfix_topic_name" value="nav_sat_fix" if="$(eval &quot;'$(var gnss_receiver)'=='nmea'&quot;)"/>
+    <let name="navsatfix_topic_name" value="ublox/nav_sat_fix" if="$(eval &quot;'$(var gnss_receiver)'=='ublox'&quot;)"/>
+    <let name="navsatfix_topic_name" value="septentrio/nav_sat_fix" if="$(eval &quot;'$(var gnss_receiver)'=='septentrio'&quot;)"/>
+    <let name="orientation_topic_name" value="/autoware_orientation"/>
+    <let name="gnss_pose_input_topic" value="/localization/pose_estimator/eagleye/gnss_compass_pose"/>
+
+
+    <!-- Ublox Driver -->
+    <group if="$(eval &quot;'$(var gnss_receiver)'=='nmea'&quot;)">
+    <include file="$(find-pkg-share common_wheeltec_sensor_launch)/launch/wheeltec_gnss_launch.py">
+    </include>
+    </group>
+
+    <!-- Ublox Driver -->
+    <group if="$(eval &quot;'$(var gnss_receiver)'=='ublox'&quot;)">
+    <include file="$(find-pkg-share wheeltec_gps_driver)/launch/wheeltec_ublox_driver_auto.launch.py">
+    </include>
+    </group>
+
+    <!-- Septentrio GNSS Driver -->
+    <group if="$(eval &quot;'$(var launch_driver)' and '$(var gnss_receiver)'=='septentrio'&quot;)">
+      <include file="$(find-pkg-share common_wheeltec_sensor_launch)/launch/mosaic_x5_rover.launch.xml"/>
+    </group>
+
+    <group if="$(eval &quot;'$(var dual_gnss)' &quot;)">
+      <include file="$(find-pkg-share common_wheeltec_sensor_launch)/launch/gnss_initializer_launch.py"/>
+    </group>
+
+    <!-- NavSatFix to MGRS Pose -->
+    <include file="$(find-pkg-share autoware_gnss_poser)/launch/gnss_poser.launch.xml">
+      <arg name="input_topic_fix" value="$(var navsatfix_topic_name)"/>
+      <arg name="input_topic_orientation" value="$(var orientation_topic_name)"/>
+      <arg name="gnss_pose_input" value="$(var gnss_pose_input_topic)"/>
+
+      <arg name="output_topic_gnss_pose" value="pose"/>
+      <arg name="output_topic_gnss_pose_cov" value="pose_with_covariance"/>
+      <arg name="output_topic_gnss_fixed" value="fixed"/>
+
+      <arg name="use_gnss_ins_orientation" value="true"/>
+    </include>
+  </group>
+</launch>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wheeltec 控制台入口</title>
+    <meta http-equiv="refresh" content="0; url=http://127.0.0.1:8787/" />
+    <style>
+      :root {
+        --bg: #0f1412;
+        --text: #e7efe8;
+        --muted: #8fa094;
+        --accent: #c4f542;
+        --panel: #1c2620;
+        --line: #2d3b33;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      }
+      .card {
+        width: min(420px, 92vw);
+        padding: 28px 24px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.4rem;
+        letter-spacing: 0.02em;
+      }
+      p {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      a {
+        display: inline-block;
+        padding: 12px 18px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #132015;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      code {
+        color: var(--accent);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Wheeltec 控制台</h1>
+      <p>
+        正在打开本机登录页<br />
+        <code>http://127.0.0.1:8787/</code>
+      </p>
+      <a href="http://127.0.0.1:8787/">打开登录页</a>
+      <p style="margin-top: 16px; margin-bottom: 0; font-size: 0.8rem">
+        同一网络的其他电脑，请使用登录页上的门户地址。若本机打不开，先在
+        <code>wheeltec-webssh</code> 目录运行 <code>npm start</code>
+      </p>
+    </div>
+    <script>
+      location.replace("http://127.0.0.1:8787/");
+    </script>
+  </body>
+</html>

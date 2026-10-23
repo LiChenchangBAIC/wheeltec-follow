@@ -1,0 +1,18 @@
+清理旧的大资源残留（只保留目录结构，重新拉源码）…
+[  1%] 准备 — 仅同步算法源码/配置（跳过语音与大资源）[  0%] 1/6 wheeltec_ros2 — 拉取 ~/wheeltec_ros2/src/[ 16%] 1/6 wheeltec_ros2 — 完成 24M
+[ 16%] 2/6 autoware — 拉取 ~/autoware/src/[ 33%] 2/6 autoware — 完成 65M
+[ 33%] 3/6 wheeltec_arm — 拉取 ~/wheeltec_arm/src/[ 50%] 3/6 wheeltec_arm — 完成 3.4M
+[ 50%] 4/6 wheeltec_stepper_arm — 拉取 ~/wheeltec_stepper_arm/[ 66%] 4/6 wheeltec_stepper_arm — 完成 2.0M
+[ 66%] 5/6 wheeltec_test — 拉取 ~/wheeltec_test/[ 83%] 5/6 wheeltec_test — 完成 36K
+[ 83%] 6/6 jetracer+jetcam — 拉取 ~/jetracer/[100%] 6/6 jetracer+jetcam — 完成 152K
+[ 92%] jetcam — 拉取 jetcam 源码[ 95%] home_scripts — 拉取调用脚本[100%] 全部完成 — 算法源码已就绪，用时 133s
+ALL_PULL_DONE
+ 24M	/Users/chenchangli/未命名文件夹/algorithm/wheeltec_ros2
+ 65M	/Users/chenchangli/未命名文件夹/algorithm/autoware
+3.4M	/Users/chenchangli/未命名文件夹/algorithm/wheeltec_arm
+152K	/Users/chenchangli/未命名文件夹/algorithm/jetracer
+ 68K	/Users/chenchangli/未命名文件夹/algorithm/jetcam
+2.0M	/Users/chenchangli/未命名文件夹/algorithm/wheeltec_stepper_arm
+ 36K	/Users/chenchangli/未命名文件夹/algorithm/wheeltec_test
+ 40K	/Users/chenchangli/未命名文件夹/algorithm/home_scripts
+      38

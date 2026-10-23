@@ -1,0 +1,82 @@
+vision_grounding_node:
+  ros__parameters:
+    image_topic: "/camera_arm/color/image_raw"  # 订阅的彩色图像话题
+    api_base: "https://dashscope.aliyuncs.com/compatible-mode/v1"  # VLM API 基础地址
+    api_key_env: "DASHSCOPE_API_KEY"  # 存放 API Key 的环境变量名
+    model: "qwen3.5-omni-plus-2026-03-15"  # 使用的视觉大模型名称
+    timeout_sec: 30.0  # 调用 VLM API 的超时时间（秒）
+    jpeg_quality: 85  # 发送给 VLM 的图像 JPEG 压缩质量
+    result_topic: "/vlm_demo/grounding_result"  # 发布定位结果的话题
+    debug_image_topic: "/vlm_demo/grounding_debug_image"  # 发布调试可视化图像的话题
+    publish_debug_image: true  # 是否发布调试图像
+    coordinate_mode: "norm_1000"  # 坐标归一化模式（0-1000）
+    chat_topic: "/vlm_demo/chat_query"  # 接收聊天查询请求的话题
+    chat_response_topic: "/vlm_demo/chat_response"  # 发布聊天回复的话题
+
+geometry_resolver_node:
+  ros__parameters:
+    depth_topic: "/camera_arm/depth/image_raw"  # 订阅的深度图像话题
+    camera_info_topic: "/gemini_info"  # 相机内参信息话题
+    camera_frame: "camera_arm_color_optical_frame"  # 相机彩色光学坐标系名称
+    depth_window: 7  # 深度采样窗口大小（像素）
+    tf_keepalive_sec: 120.0  # TF 变换保活时长（秒）
+    default_target_frame: "vlm_target_frame"  # 默认目标坐标系名称
+
+pick_task_manager_node:
+  ros__parameters:
+    command_topic: "/vlm_demo/user_command"  # 接收用户指令的话题
+    result_topic: "/vlm_demo/task_result"  # 发布任务执行结果的话题
+    chat_topic: "/vlm_demo/chat_query"  # 接收聊天查询请求的话题
+
+    # Text planner. It outputs JSON steps; image grounding is only used by locate_vlm steps.
+    api_base: "https://dashscope.aliyuncs.com/compatible-mode/v1"  # 文本规划器 API 基础地址
+    api_key_env: "DASHSCOPE_API_KEY"  # 存放 API Key 的环境变量名
+    planner_model: "qwen-plus-latest"  # 文本规划使用的模型名称
+    planner_temperature: 0.0  # 规划模型采样温度
+    planner_timeout_sec: 60.0  # 规划模型调用超时时间（秒）
+
+    ground_targets_service: "/vlm_demo/ground_targets"  # 目标定位服务名称
+    resolve_service: "/vlm_demo/resolve_target_pose"  # 目标位姿解算服务名称
+    min_confidence: 0.30  # 接受定位结果的最小置信度
+    tf_frame_prefix: "vlm"  # 生成的 TF 坐标系名称前缀
+    batch_vlm_grounding: true  # 是否批量进行 VLM 定位
+
+    grab_service: "/obj_grab_service"  # 抓取物体服务名称
+    place_service: "/obj_place_service"  # 放置物体服务名称
+    place_to_frame_service: "/obj_place_to_frame_service"  # 放置到指定坐标系服务名称
+
+    move_named_service: "/arm/move_named"  # 移动到命名点位服务名称
+    move_relative_service: "/arm/move_relative"  # 相对移动服务名称
+    move_pose_service: "/arm/move_pose"  # 移动到指定位姿服务名称
+    move_to_frame_service: "/arm/move_to_frame"  # 移动到指定坐标系服务名称
+    move_cartesian_service: "/arm/move_cartesian"  # 笛卡尔空间移动服务名称
+    move_joints_service: "/arm/move_joints"  # 关节空间移动服务名称
+
+    default_reference_frame: "base_link"  # 默认参考坐标系
+    default_velocity_scale: 0.3  # 默认运动速度缩放比例
+    default_acceleration_scale: 0.3  # 默认运动加速度缩放比例
+    default_above_offset_z: 0.08  # 抓取前上方悬停的 Z 轴偏移量（米）
+    default_stack_offset_z: 0.05  # 堆叠放置时的 Z 轴偏移量（米）
+    service_wait_timeout_sec: 2.0  # 等待服务可用的超时时间（秒）
+    service_call_timeout_sec: 120.0  # 服务调用超时时间（秒）
+    max_wait_sec: 60.0  # 最大等待时间（秒）
+
+    nav2_action_name: "/navigate_to_pose"  # Nav2 导航动作名称
+    nav_frame_id: "map"  # 导航使用的坐标系
+    nav_server_timeout_sec: 5.0  # 等待导航服务器的超时时间（秒）
+    nav_goal_timeout_sec: 180.0  # 导航目标完成的超时时间（秒）
+    nav_feedback_log_interval_sec: 2.0  # 导航反馈日志打印间隔（秒）
+    nav_settle_delay_sec: 2.0  # 到达导航目标后的稳定等待时间（秒）
+
+    # Base preset points. Edit these values to match your map.
+    nav_named_targets_json: |  # 预设导航点位（JSON 格式，按需修改以匹配实际地图）
+      {
+        "A": {"x": 1.0, "y": 0.0, "yaw_deg": 0.0},
+        "P": {"x": 0.0, "y": 0.0, "yaw_deg": 0.0}
+      }
+
+command_node:
+  ros__parameters:
+    command_topic: "/vlm_demo/user_command"  # 发布用户指令的话题
+    chat_topic: "/vlm_demo/chat_query"  # 发布聊天查询请求的话题
+    chat_response_topic: "/vlm_demo/chat_response"  # 接收聊天回复的话题

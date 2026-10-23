@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    ld_velocity_ratio: 2.4    #wheeltec
+    ld_lateral_error_ratio: 0.6    #wheeltec
+    ld_curvature_ratio: 120.0     #wheeltec
+    long_ld_lateral_error_threshold: 0.5 #wheeltec
+    min_lookahead_distance: 1.0   #wheeltec
+    max_lookahead_distance: 1.5   #wheeltec
+    converged_steer_rad: 0.40       #wheeltec
+    reverse_min_lookahead_distance: 1.0   #wheeltec
+    prediction_ds: 0.5
+    prediction_distance_length: 10.0    #wheeltec
+    resampling_ds: 0.1
+    curvature_calculation_distance: 0.5    #wheeltec
+    enable_path_smoothing: false
+    path_filter_moving_ave_num: 25

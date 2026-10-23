@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>算法同步进度入口</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #0f1412;
+        color: #e7efe8;
+        font-family: ui-monospace, Menlo, monospace;
+      }
+      a {
+        color: #132015;
+        background: #c4f542;
+        padding: 12px 18px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      p { color: #8fa094; }
+    </style>
+  </head>
+  <body>
+    <div style="text-align: center">
+      <h1>算法同步进度</h1>
+      <p id="msg">正在打开进度页…</p>
+      <p><a id="link" href="http://127.0.0.1:8790/progress.html">打开进度条</a></p>
+    </div>
+    <script>
+      // Prefer local static server on 8790; fallback note
+      const url = "http://127.0.0.1:8790/progress.html";
+      document.getElementById("link").href = url;
+      location.replace(url);
+    </script>
+  </body>
+</html>

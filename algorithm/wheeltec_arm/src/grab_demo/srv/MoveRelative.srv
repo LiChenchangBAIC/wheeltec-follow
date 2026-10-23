@@ -1,0 +1,9 @@
+string reference_frame
+float64 dx
+float64 dy
+float64 dz
+float64 velocity_scale
+float64 acceleration_scale
+---
+bool success
+string message

@@ -1,0 +1,377 @@
+# GPS WPF CHANGES:
+# - amcl params where removed. They are not needed because global localization is provided
+#   by an ekf node on robot_localization fusing gps data with local odometry sources
+# - static layer is removed from both costmaps, in this tutorial we assume there is no map
+#   of the environment
+# - global costmap is set to be rolling to allow the robot to traverse big environment by
+#   following successive relatively close waypoints that fit in a smaller rolling costmap
+
+bt_navigator:
+  ros__parameters:
+    global_frame: map  
+    robot_base_frame: base_footprint
+    odom_topic: /odom_combined      #提供连续位姿估计的里程计话题
+    bt_loop_duration: 10            #BT执行每次迭代的持续时间（以毫秒为单位
+    default_server_timeout: 20      #BT操作节点等待操作服务器确认时的默认超时值（以毫秒为单位）
+    wait_for_service_timeout: 1000  #启动时等待服务可用超时时间(ms)
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
+    # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
+    # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
+    # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
+    # They can be set here or via a RewrittenYaml remap from a parent launch file to Nav2.
+
+    # plugin_lib_names is used to add custom BT plugins to the executor (vector of strings).
+    # Built-in plugins are added automatically
+    # plugin_lib_names: []
+    error_code_name_prefixes:
+      - compute_path
+      - follow_path
+
+controller_server:
+  ros__parameters:
+    use_sim_time: False                             
+    controller_frequency: 20.0                      #运行控制器的频率 (hz)
+    controller_plugins: ["FollowPath"]              #用于处理请求和参数的控制器插件的映射名称列表
+    odom_topic: /odom_combined                      #里程计话题名称
+
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugin: "goal_checker" # "precise_goal_checker"
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      # 在 movement_time_allowance 时间内，
+      # 机器人至少需要移动0.5米，否则认为机器人已经卡住(Stuck)。
+      movement_time_allowance: 10.0
+      # 检测时间窗口(s)。
+      # 若10秒内移动距离不足 required_movement_radius，则触发恢复行为。
+
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.05    # 到达目标允许的位置误差(m)
+      yaw_goal_tolerance: 0.25   # 到达目标允许的航向误差(rad)
+      stateful: True
+
+    FollowPath:
+      plugin: "nav2_rotation_shim_controller::RotationShimController" #旋转控制器
+      angular_dist_threshold: 0.785       # 当机器人航向与路径方向误差超过该值(rad)时，启动原地旋转。
+      forward_sampling_distance: 0.5      # 在路径前方0.5m位置计算路径方向
+      rotate_to_heading_angular_vel: 1.8  # 原地旋转时角速度(rad/s)
+      max_angular_accel: 0.5              # 原地旋转最大角加速度(rad/s²)
+      simulate_ahead_time: 1.0            # 控制器预测未来旋转时间(s)
+
+      rotate_to_goal_heading: True        # 到达目标后是否继续旋转至目标航向。
+      primary_controller: "nav2_mppi_controller::MPPIController" #MPPI控制器
+      time_steps: 56    #候选轨迹中的时间步长（点）数
+      model_dt: 0.05    #每个时间步长的时间步长的长度dt（以秒为单位）是预测范围
+      batch_size: 2000  #在给定迭代中从当前最佳控制序列中随机采样的候选轨迹的数量
+      vx_std: 0.2       #Vx 的抽样标准差
+      vy_std: 0.2       #Vy 的抽样标准差
+      wz_std: 0.25       #Wz（角速度）的抽样标准差
+      vx_max: 0.5       #目标最大前进速度（米/秒）
+      vx_min: -0.5      #目标最大反向速度（米/秒）
+      vy_max: 0.5       #如果使用Omni运动模型，目标最大横向速度（m/s）
+      wz_max: 2.0       #最大旋转速度（弧度/秒）
+      ax_max: 0.5
+      ax_min: -0.5
+      ay_max: 0.0
+      az_max: 0.5
+      iteration_count: 1 #迭代次数
+      prune_distance: 1.5 #路径上距离机器人最近点的距离（米）
+      enforce_path_inversion: false
+      transform_tolerance: 0.1 #使用 TF（s）进行数据转换的时间容差
+      temperature: 0.3 #根据成本选择轨迹，0表示使用成本最佳的控制，巨大的值将导致仅取所有轨迹的平均值而不考虑成本。
+      gamma: 0.015 #平滑度（高）和低能耗（低）之间的权衡,保持默认值
+      motion_model: "DiffDrive" #用于轨迹规划的所需运动模型。选项包括DiffDrive、Omni或Ackermann。
+      visualize: false #是否发布调试轨迹以供可视化。
+      TrajectoryVisualizer: #轨迹可视化
+        trajectory_step: 5 #轨迹之间的步骤可视化以对候选轨迹池进行下采样
+        time_step: 3 #轨迹上点之间的步骤可视化以降低轨迹密度的采样
+      AckermannConstraints:
+        min_turning_r: 0.25 #最小转弯半径（阿克曼运动模型）
+      critics: ["ConstraintCritic", "ObstaclesCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"] #评论插件
+      ConstraintCritic: #修复超出设定的动态或运动学约束的轨迹
+        enabled: true
+        cost_power: 1 
+        cost_weight: 4.0  #权重参数
+      
+      GoalAngleCritic: #当距离目标较近时，GoalAngleCritic会激励导航以达到目标姿势的角度
+        enabled: true
+        cost_power: 1
+        cost_weight: 3.0 #权重参数
+        threshold_to_consider: 0.5  #考虑阈值：机器人与目标之间的最小距离（米），超过此距离则考虑角度目标成本
+
+      GoalCritic: #当距离目标较近时，GoalCritic会激励机器人在空间上向目标导航
+        enabled: true
+        cost_power: 1
+        cost_weight: 15.0 #权重参数
+        threshold_to_consider: 1.4  #机器人与目标之间的最小距离（米），超过此距离则要考虑目标距离成本。
+
+      ObstaclesCritic:
+        enabled: true
+        cost_power: 1
+        repulsion_weight: 1.5 #权重参数，通常优先选择成本较低的空间中的路线。
+        critical_weight: 30.0 #应用于临界碰撞的权重，用于collision_margin_distance防止近距离碰撞
+        consider_footprint: false #是否使用点成本（如果机器人是圆形的或者计算能力低）或计算 SE2 足迹成本
+        collision_cost: 10000.0 #应用于轨迹中真实碰撞的成本。
+        collision_margin_distance: 0.1 #碰撞边缘距离，应该设置在0.05-0.2之间，请确保将此参数设置为预计机器人需要穿越的最窄空间
+        near_goal_distance: 0.4 #靠近目标的距离（米）停止应用优先障碍物项，以允许机器人平稳地收敛到靠近障碍物的目标姿势，0.5 --> 0.6 -->0.3(Tues) 
+        cost_scaling_factor: 1.0
+        inflation_radius: 0.65  #膨胀半径，仅限Humble
+
+      PreferForwardCritic: #激励机器人前进，而不是后退
+        enabled: true
+        cost_power: 1
+        cost_weight: 0.1 #权重参数
+        threshold_to_consider: 0.5 #机器人与目标之间的距离（米）停止考虑前锋并允许目标批评家接管。
+      # Option to replace Cost and use Obstacles instead
+
+      PathAlignCritic:  #PathAlignCritic会激励机器人与全局路径保持一致。它不实现路径跟随行为。
+        enabled: true
+        cost_power: 1
+        cost_weight: 6.0 #权重参数
+        max_path_occupancy_ratio: 0.07 #最大路径占用率
+        trajectory_point_step: 4
+        threshold_to_consider: 0.5 #机器人与目标之间的距离阈值，阈值符合则停止考虑路径对齐并允许目标批评家接管。
+        offset_from_furthest: 20 #最远偏移量
+        use_path_orientations: false #是否在路径对齐中考虑路径的方向
+
+      PathAngleCritic: #路径角度评论，机器人在因累积角度误差较大而需要时进行急转弯。
+        enabled: true
+        cost_power: 1
+        cost_weight: 4.0 #权重参数
+        offset_from_furthest: 4 #最远偏移量，任何轨迹达到最远路径点之后的路径点数，用于计算相对于的路径角度。
+        threshold_to_consider: 0.5 #机器人与目标之间的距离阈值，阈值符合允许目标批评家接管。
+        max_angle_to_furthest: 1.0 #机器人与目标之间的角距离
+        mode: 0
+
+      PathFollowCritic: #路径跟随评论家激励机器人沿着路径前进。
+        enabled: true
+        cost_power: 1
+        cost_weight: 25.0 #权重参数
+        offset_from_furthest: 5
+        threshold_to_consider: 1.4 #机器人与目标之间的距离阈值，停止考虑路径跟随，并允许目标评论家接管。
+#参数参考：https://docs.nav2.org/configuration/packages/configuring-mppic.html
+
+
+# GPS WPF CHANGE: Remove static layer
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0             # 局部代价地图更新频率(Hz)
+      publish_frequency: 2.0            # 局部代价地图发布频率(Hz)
+      global_frame: odom_combined       # 局部代价地图所使用的全局坐标系。
+      robot_base_frame: base_footprint  # 机器人基坐标系。
+      rolling_window: true
+      width: 3   
+      height: 3
+      resolution: 0.05
+      #robot_radius: 0.22
+      footprint: "[[-0.55, -0.3280], [-0.55, 0.3280], [0.144, 0.3280], [0.144, -0.3280]]" #wheeltec s200_4wd
+      plugins: ["voxel_layer", "inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.65
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: True
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+      always_send_full_costmap: True  # 是否每次发布完整Costmap
+
+# GPS WPF CHANGE: Remove static layer
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_footprint
+      #robot_radius: 0.22
+      footprint: "[[-0.55, -0.3280], [-0.55, 0.3280], [0.144, 0.3280], [0.144, -0.3280]]" #wheeltec s200_4wd
+      resolution: 0.1
+      # When using GPS navigation you will potentially traverse huge environments which are not practical to
+      # fit on a big static costmap. Thus it is recommended to use a rolling global costmap large enough to
+      # contain each pair of successive waypoints. See: https://github.com/ros-planning/navigation2/issues/2174
+      rolling_window: True
+      width: 50
+      height: 50
+      # origin_x: 0.0
+      # origin_y: 0.0
+      track_unknown_space: true
+      # no static map
+      plugins: ["obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+          # outdoors there will probably be more inf points
+          inf_is_valid: true
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 2.0
+        inflation_radius: 0.75
+      always_send_full_costmap: True
+
+# The yaml_filename does not need to be specified since it going to be set by defaults in launch.
+# If you'd rather set it in the yaml, remove the default "map" value in the tb3_simulation_launch.py
+# file & provide full path to map below. If CLI map configuration or launch default is provided, that will be used.
+# map_server:
+#   ros__parameters:
+#     yaml_filename: ""
+
+map_saver:
+  ros__parameters:
+    save_map_timeout: 5.0
+    free_thresh_default: 0.25
+    occupied_thresh_default: 0.65
+    map_subscribe_transient_local: True
+    service_introspection_mode: "disabled"
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 1.0
+    use_sim_time: False
+    costmap_update_timeout: 1.0
+
+    planner_plugins: ["GridBased"]
+    service_introspection_mode: "disabled"
+    GridBased:
+      plugin: "nav2_navfn_planner/NavfnPlanner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+      use_final_approach_orientation: False
+
+
+smoother_server:
+  ros__parameters:
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      refinement_num: 2
+      # True for Hybrid A* or State Lattice to not smooth over directional changes
+      enforce_path_inversion: True
+      do_refinement: True
+
+behavior_server:
+  ros__parameters:
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins:
+      ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
+    spin:
+      plugin: "nav2_behaviors/Spin"
+    backup:
+      plugin: "nav2_behaviors/BackUp"
+      acceleration_limit: 2.5
+      deceleration_limit: -2.5
+      minimum_speed: 0.10
+    drive_on_heading:
+      plugin: "nav2_behaviors/DriveOnHeading"
+      acceleration_limit: 2.5
+      deceleration_limit: -2.5
+      minimum_speed: 0.10
+    wait:
+      plugin: "nav2_behaviors/Wait"
+    assisted_teleop:
+      plugin: "nav2_behaviors/AssistedTeleop"
+    local_frame: odom_combined
+    global_frame: map
+    robot_base_frame: base_footprint
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 1.0
+    min_rotational_vel: 0.4
+    rotational_acc_lim: 3.2
+
+waypoint_follower:
+  ros__parameters:
+    loop_rate: 20
+    stop_on_failure: false
+    service_introspection_mode: "disabled"
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    smoothing_frequency: 20.0
+    scale_velocities: False
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.26, 0.0, 1.0]
+    min_velocity: [-0.26, 0.0, -1.0]
+    max_accel: [2.5, 0.0, 3.2]
+    max_decel: [-2.5, 0.0, -3.2]
+    odom_topic: "odom_combined"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+collision_monitor:
+  ros__parameters:
+    base_frame_id: "base_footprint"
+    odom_frame_id: "odom_combined"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "cmd_vel"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+    # Polygons represent zone around the robot for "stop", "slowdown" and "limit" action types,
+    # and robot footprint for "approach" action type.
+    polygons: ["FootprintApproach"]
+    FootprintApproach:
+      type: "polygon"
+      action_type: "approach"
+      footprint_topic: "/local_costmap/published_footprint"
+      time_before_collision: 2.0
+      simulation_time_step: 0.1
+      min_points: 6
+      visualize: False
+      enabled: True
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "scan"
+      min_height: 0.15
+      max_height: 2.0
+      enabled: True
