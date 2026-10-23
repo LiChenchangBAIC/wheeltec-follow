@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>yolo_same_follow</name>
+  <version>0.2.0</version>
+  <description>Click-to-lock YOLO segmentation follower. Publishes the existing Position topic for visualfollow.</description>
+  <maintainer email="wheeltec@local">wheeltec</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>message_filters</depend>
+  <depend>turn_on_wheeltec_robot</depend>
+  <exec_depend>simple_follower_ros2</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
