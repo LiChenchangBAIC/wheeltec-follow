@@ -4,7 +4,7 @@
   <name>yolo_same_follow</name>
   <version>0.2.0</version>
   <description>Click-to-lock YOLO segmentation follower. Publishes the existing Position topic for visualfollow.</description>
-  <maintainer email="wheeltec@local">wheeltec</maintainer>
+  <maintainer email="wheeltec@example.com">wheeltec</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_python</buildtool_depend>

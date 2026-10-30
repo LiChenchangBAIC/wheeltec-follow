@@ -1,7 +1,7 @@
 node_modules/
 .Trash-1000/
-algorithm/.pull_key
-algorithm/.pull_key.pub
+.pull_key
+.pull_key.pub
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -10,8 +10,9 @@ __pycache__/
 *.engine
 *.pt
 *.onnx
-/build/
-/install/
+build/
+install/
 /log/
+algorithm/wheeltec_stepper_arm/log/
 .idea/
 .vscode/

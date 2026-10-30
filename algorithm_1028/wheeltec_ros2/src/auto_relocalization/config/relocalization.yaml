@@ -1,0 +1,36 @@
+simple_relocalization:
+  ros__parameters:
+    #地图与话题
+    map_yaml_path: "/home/wheeltec/wheeltec_ros2/src/wheeltec_robot_nav2/map/WHEELTEC.yaml"
+    scan_topic: "/scan"
+    initialpose_topic: "/initialpose"
+    #匹配参数
+    robot_radius: 0.20
+    score_threshold: 0.30
+    high_score: 0.55
+    top_k: 10
+    #粗搜索参数
+    coarse_scale: 4
+    coarse_step: 3
+    coarse_yaw_step: 30.0
+    max_coarse_rays: 180
+    #精搜索参数
+    max_fine_rays: 1000
+    sigma_px: 3.0
+    #调试地图
+    save_debug_image: true
+    #搜索区域限制
+    search_x_min: -1.0
+    search_x_max: -1.0
+    search_y_min: -1.0
+    search_y_max: -1.0
+    #已知位姿诊断
+    num_scans: 1
+    known_pose_x: -9999.0
+    known_pose_y: -9999.0
+    known_pose_yaw_deg: 0.0
+    #里程计相关
+    use_odom: true
+    odom_topic: "/odom"
+    laser_offset_x: 0.0
+    laser_offset_y: 0.0

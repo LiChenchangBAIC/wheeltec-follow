@@ -1,0 +1,9 @@
+string[] joint_names
+float64[] values
+bool degrees
+bool relative
+float64 velocity_scale
+float64 acceleration_scale
+---
+bool success
+string message

@@ -1,0 +1,17 @@
+# Batch visual grounding request. Each query is one target description.
+string[] queries
+---
+bool success
+string message
+bool[] found
+bool[] ambiguous
+string[] questions
+string[] target_labels
+float32[] confidences
+int32[] x1
+int32[] y1
+int32[] x2
+int32[] y2
+int32[] grasp_u
+int32[] grasp_v
+string raw_json

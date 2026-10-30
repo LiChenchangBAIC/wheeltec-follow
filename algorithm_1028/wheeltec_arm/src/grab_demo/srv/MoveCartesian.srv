@@ -1,0 +1,9 @@
+geometry_msgs/PoseStamped[] waypoints
+bool keep_current_orientation
+float64 eef_step
+float64 jump_threshold
+float64 min_fraction
+---
+bool success
+float64 fraction
+string message

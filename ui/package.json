@@ -1,0 +1,15 @@
+{
+  "name": "baic-hmi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BAIC vehicle page connected to the Wheeltec robot",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ssh2": "^1.16.0",
+    "ws": "^8.18.0"
+  }
+}

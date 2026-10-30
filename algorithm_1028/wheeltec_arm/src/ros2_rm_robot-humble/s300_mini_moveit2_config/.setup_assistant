@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: rm_description
+    relative_path: urdf/s300_mini.xacro
+  srdf:
+    relative_path: config/s300_mini_description.srdf
+  package_settings:
+    author_name: wheeltec
+    author_email: wheeltec@163.com
+    generated_timestamp: 1746501408

@@ -1,0 +1,8 @@
+road_network_node:
+  ros__parameters:
+    use_sim_time: false
+    publish_frequency: 10.0
+
+waypoint_publisher:
+  ros__parameters:
+    use_sim_time: false

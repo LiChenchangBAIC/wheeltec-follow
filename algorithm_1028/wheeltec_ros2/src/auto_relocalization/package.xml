@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>auto_relocalization</name>
+  <version>0.0.0</version>
+  <description>TODO: Package description</description>
+  <maintainer email="wheeltec@todo.todo">wheeltec</maintainer>
+  <license>Apache-2.0</license>
+
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <exec_depend>sensor_msgs</exec_depend>    <!-- 激光雷达数据 -->
+  <exec_depend>nav_msgs</exec_depend>       <!-- 地图数据 -->
+  
+
+  <!-- Python第三方依赖 -->
+  <exec_depend>python3-opencv</exec_depend> <!-- OpenCV图像匹配 -->
+  <exec_depend>python3-yaml</exec_depend>   <!-- 加载地图YAML配置 -->
+  <exec_depend>python3-pil</exec_depend>    <!-- 处理PGM图像 -->
+  <exec_depend>python3-numpy</exec_depend>  <!-- 数值计算 -->
+  
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

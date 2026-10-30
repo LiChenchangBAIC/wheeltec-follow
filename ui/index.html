@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BAIC 车辆界面</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <header class="topbar">
+        <img class="logo" src="设计稿/baic-logo.png" alt="BAIC" />
+        <button class="user" id="user-btn" type="button" aria-haspopup="dialog">
+          <span class="avatar" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="9" r="3.2"></circle>
+              <path d="M6.2 18.2c1.2-2.4 3.2-3.6 5.8-3.6s4.6 1.2 5.8 3.6"></path>
+            </svg>
+          </span>
+          <span id="user-name">未登录</span>
+        </button>
+      </header>
+
+      <main class="board">
+        <section class="card status" aria-label="车辆基本信息">
+          <div class="metric">
+            <span class="k">车速</span>
+            <strong id="speed">0.42 <small>m/s</small></strong>
+          </div>
+          <div class="metric voltage">
+            <span class="k">电量</span>
+            <strong id="voltage">24.6 <small>V</small></strong>
+          </div>
+          <div class="lamps" id="lamps">
+            <span class="lamp bad" id="lamp-link"><i></i><b>未连接</b></span>
+            <span class="lamp ok" id="lamp-func"><i></i><b>功能正常</b></span>
+          </div>
+          <div class="voice">
+            <div class="wave" id="wave" aria-hidden="true"></div>
+            <p class="cmd" id="voice-line">最近指令：跟着前面那个人</p>
+          </div>
+        </section>
+
+        <div class="center">
+          <section class="card vision" aria-label="车辆视觉">
+            <h2>车辆视觉</h2>
+            <div class="fit">
+            <div class="frame">
+              <canvas id="camera" width="160" height="90"></canvas>
+              <div id="boxes"></div>
+            </div>
+            </div>
+            <p class="lockline" id="lock-line">已锁定：人 #3</p>
+            <button class="ghost" id="unlock" type="button">取消锁定</button>
+          </section>
+
+          <section class="card console" aria-label="控制台">
+            <div class="console-bar">
+              <h2>控制台</h2>
+              <div class="tabs" id="tabs"></div>
+              <button class="plus" id="new-tab" type="button" aria-label="新建控制台">+</button>
+            </div>
+            <div class="term" id="term">
+              <div class="log" id="log"></div>
+              <form class="prompt" id="prompt-form">
+                <span>wheeltec@wheeltec:~$</span>
+                <input id="prompt" autocomplete="off" spellcheck="false" aria-label="命令" />
+              </form>
+            </div>
+          </section>
+        </div>
+
+        <section class="card mapcard" aria-label="周围环境">
+          <h2>周围环境</h2>
+          <svg id="map" viewBox="0 0 100 100" role="img" aria-label="俯视图，点击设定终点">
+            <rect class="floor" x="8" y="8" width="84" height="84" rx="2"></rect>
+            <path class="wall" d="M18 18 H82 V82 H18 Z M32 18 V40 H18 M50 40 H82 M32 58 H64 V82 M64 58 V40"></path>
+            <path id="route" class="route"></path>
+            <g id="sonar"></g>
+            <g id="robot"></g>
+            <g id="goal"></g>
+          </svg>
+          <p class="hint">点击地图设定终点</p>
+          <button class="ghost" id="go" type="button">前往终点</button>
+        </section>
+      </main>
+    </div>
+    <div class="login-layer" id="login-layer" hidden>
+      <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <div class="login-head">
+          <h2 id="login-title">登录</h2>
+          <button class="login-close" id="login-close" type="button">关闭</button>
+        </div>
+        <form id="login-form">
+          <label>主机<input id="login-host" name="host" value="192.168.0.105" autocomplete="off" /></label>
+          <label>用户名<input id="login-user" name="username" autocomplete="username" /></label>
+          <label>密码<input id="login-pass" name="password" type="password" autocomplete="current-password" /></label>
+          <p class="login-note">当前是仿真登录，填好用户名和密码即可。还不会连到小车。</p>
+          <p class="login-status" id="login-status" role="status"></p>
+          <div class="login-actions">
+            <button class="ghost login-submit" type="submit">登录</button>
+            <button class="ghost" id="logout" type="button" hidden>退出</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

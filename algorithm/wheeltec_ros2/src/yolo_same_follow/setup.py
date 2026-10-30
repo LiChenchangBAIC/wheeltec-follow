@@ -15,7 +15,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='wheeltec',
-    maintainer_email='wheeltec@local',
+    maintainer_email='wheeltec@example.com',
     description='Click-to-lock YOLO segmentation follower',
     license='Apache-2.0',
     entry_points={

@@ -1,0 +1,5 @@
+<library path="nav2_back_up_safe">
+  <class type="nav2_custom_behaviors::BackUpSafe" base_class_type="nav2_core::Behavior">
+    <description>Custom backup behavior with configurable costmap collision threshold and direction search</description>
+  </class>
+</library>

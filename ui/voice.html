@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BAIC 车辆界面</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="voice.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <header class="topbar">
+        <img class="logo" src="设计稿/baic-logo.png" alt="BAIC" />
+        <div class="top-actions">
+          <button class="start-all" id="debug-open" type="button" aria-pressed="false">调试</button>
+          <button class="start-all" id="start-all" type="button" disabled title="启动还没运行的相机、目标检测和建图。已经在跑的底盘和语音不会重新启动。">启动全部</button>
+          <button class="user" id="user-btn" type="button" aria-haspopup="dialog">
+          <span class="avatar" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="9" r="3.2"></circle>
+              <path d="M6.2 18.2c1.2-2.4 3.2-3.6 5.8-3.6s4.6 1.2 5.8 3.6"></path>
+            </svg>
+          </span>
+          <span id="user-name">未登录</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="board" id="drive-board">
+        <section class="card status" aria-label="车辆基本信息">
+          <div class="metric">
+            <span class="k">车速</span>
+            <strong id="speed">-- <small>m/s</small></strong>
+          </div>
+          <div class="metric voltage">
+            <span class="k">电量</span>
+            <strong id="voltage">-- <small>V</small></strong>
+          </div>
+          <div class="lamps" id="lamps">
+            <span class="lamp bad" id="lamp-link"><i></i><b>未连接</b></span>
+            <span class="lamp bad" id="lamp-func"><i></i><b>无法确认</b></span>
+          </div>
+          <div class="voice">
+            <button class="wave off" id="wave" type="button" aria-pressed="false" aria-label="开始说话"></button>
+            <p class="cmd" id="voice-line">最近指令：—</p>
+            <p class="cmd reply" id="reply-line">回复：—</p>
+            <form class="say" id="say-form">
+              <input id="say-input" autocomplete="off" spellcheck="false" placeholder="输入一句话" aria-label="发给语音" />
+              <button class="say-go" type="submit">说出</button>
+            </form>
+          </div>
+        </section>
+
+        <div class="center">
+          <section class="card vision" aria-label="车辆视觉">
+            <h2>车辆视觉</h2>
+            <div class="fit">
+              <div class="frame">
+                <img id="camera-view" alt="RGB相机" hidden />
+              </div>
+            </div>
+          </section>
+
+          <section class="card console" aria-label="控制台">
+            <div class="console-bar">
+              <h2>控制台</h2>
+              <div class="tabs" id="tabs"></div>
+              <button class="plus" id="new-tab" type="button" aria-label="新建控制台">+</button>
+            </div>
+            <div class="term" id="term">
+              <div class="log" id="log"></div>
+              <form class="prompt" id="prompt-form">
+                <span id="prompt-label">$</span>
+                <input id="prompt" autocomplete="off" spellcheck="false" aria-label="命令" />
+              </form>
+            </div>
+          </section>
+        </div>
+
+        <section class="card mapcard" aria-label="周围环境">
+          <h2>周围环境</h2>
+          <div class="fit">
+            <canvas class="slam" id="slam-view" aria-label="俯视图，点击空地设定终点" hidden></canvas>
+          </div>
+        </section>
+      </main>
+      <main class="board debug-board" id="debug-board" hidden>
+        <section class="card debug-meters" aria-label="实时占用">
+          <div class="metric">
+            <span class="k">算力</span>
+            <strong id="cpu-now">-- <small>%</small></strong>
+          </div>
+          <p class="debug-sub" id="cpu-sub">登录后显示车上的占用</p>
+          <div class="metric">
+            <span class="k">内存</span>
+            <strong id="mem-now">-- <small>MiB</small></strong>
+          </div>
+          <p class="debug-sub" id="mem-sub">—</p>
+        </section>
+        <section class="card debug-charts" aria-label="占用曲线">
+          <h2>最近 60 秒</h2>
+          <div class="chart-block">
+            <span>算力 %</span>
+            <canvas id="cpu-chart"></canvas>
+          </div>
+          <div class="chart-block">
+            <span>内存 %</span>
+            <canvas id="mem-chart"></canvas>
+          </div>
+        </section>
+        <section class="card debug-detail" aria-label="车辆详情">
+          <h2>车辆</h2>
+          <dl id="debug-facts"></dl>
+          <h2>进程</h2>
+          <ul id="debug-procs"></ul>
+        </section>
+      </main>
+    </div>
+    <div class="login-layer" id="login-layer" hidden>
+      <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <div class="login-head">
+          <h2 id="login-title">登录</h2>
+          <button class="login-close" id="login-close" type="button">关闭</button>
+        </div>
+        <form id="login-form">
+          <label>主机<input id="login-host" name="host" value="192.168.0.105" autocomplete="off" /></label>
+          <label>用户名<input id="login-user" name="username" value="wheeltec" autocomplete="username" /></label>
+          <label>密码<input id="login-pass" name="password" type="password" autocomplete="current-password" /></label>
+          <p class="login-note">用这里的主机、用户名和密码连接小车。连上之后，车速、电压、相机、地图和语音都从小车读取。</p>
+          <p class="login-status" id="login-status" role="status"></p>
+          <div class="login-actions">
+            <button class="ghost login-submit" type="submit">登录</button>
+            <button class="ghost" id="logout" type="button" hidden>退出</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="voice.js?v=5"></script>
+  </body>
+</html>

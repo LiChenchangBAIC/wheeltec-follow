@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="s300_mini_description">
+    <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+
+    <!-- Import s300_mini_description urdf file -->
+    <xacro:include filename="$(find rm_description)/urdf/s300_mini.xacro" />
+
+    <!-- Import control_xacro -->
+    <xacro:include filename="s300_mini_description.ros2_control.xacro" />
+
+
+    <xacro:s300_mini_description_ros2_control name="FakeSystem" initial_positions_file="$(arg initial_positions_file)"/>
+
+</robot>

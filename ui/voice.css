@@ -1,0 +1,185 @@
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.start-all {
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--coral);
+  background: transparent;
+  border: 1px solid rgba(255, 90, 50, 0.55);
+  border-radius: 999px;
+  padding: 0.28rem 0.75rem;
+  cursor: pointer;
+}
+
+.start-all:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.start-all.on {
+  color: #1a100c;
+  background: var(--coral);
+  border-color: var(--coral);
+}
+
+.board[hidden] {
+  display: none;
+}
+
+.debug-board {
+  grid-template-columns: 0.78fr 1.35fr 0.95fr;
+}
+
+.debug-meters,
+.debug-charts,
+.debug-detail {
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.35rem;
+  overflow: auto;
+}
+
+.debug-sub {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.chart-block {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.chart-block span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.chart-block canvas {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border-radius: 0.7rem;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.debug-detail dl,
+.debug-detail ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.74rem;
+}
+
+.debug-detail dl {
+  display: grid;
+  grid-template-columns: 4.2em 1fr;
+  gap: 0.28rem 0.45rem;
+}
+
+.debug-detail dt {
+  color: var(--muted);
+}
+
+.debug-detail dd {
+  margin: 0;
+}
+
+.debug-detail h2 + ul,
+.debug-detail dl + h2 {
+  margin-top: 0.55rem;
+}
+
+.debug-detail li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.18rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+button.wave {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.wave.talk span {
+  background: #ffd0c2;
+  animation-duration: 0.42s;
+}
+
+.reply {
+  margin-top: 0.28rem;
+  color: var(--text);
+}
+
+.say {
+  margin: 0.55rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.say input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.28rem 0;
+  outline: none;
+}
+
+.say-go {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--coral);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0;
+  cursor: pointer;
+}
+
+.say input::placeholder {
+  color: var(--muted);
+}
+
+#camera-view {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+#camera-view[hidden],
+#slam-view[hidden] {
+  display: none;
+}
+
+.mapcard .fit {
+  place-items: stretch;
+}
+
+.slam {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 0.7rem;
+  cursor: crosshair;
+}
