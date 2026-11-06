@@ -26,6 +26,46 @@
   border-color: var(--coral);
 }
 
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.panel-start {
+  flex: none;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--coral);
+  background: transparent;
+  border: 1px solid rgba(255, 90, 50, 0.55);
+  border-radius: 999px;
+  padding: 0.16rem 0.62rem;
+  cursor: pointer;
+}
+
+.panel-start:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.panel-start.live {
+  color: #f3f3f3;
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+.status {
+  position: relative;
+}
+
+.status > .panel-start {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.9rem;
+  z-index: 2;
+}
+
 .board[hidden] {
   display: none;
 }
@@ -105,6 +145,17 @@
   gap: 0.5rem;
   padding: 0.18rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.debug-detail li span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.wave.live span {
+  animation: none;
 }
 
 button.wave {

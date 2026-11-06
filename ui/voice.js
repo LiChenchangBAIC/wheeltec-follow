@@ -20,7 +20,7 @@ for (let i = 0; i < 42; i += 1) {
 }
 
 let auth = null;
-let starting = false;
+const starting = { units: false, vision: false, map: false };
 let live = null;
 let speaking = false;
 let wantListen = false;
@@ -29,6 +29,12 @@ let speakToken = 0;
 let hearToken = 0;
 let spoken = "";
 let lastSent = "";
+let audioCtx = null;
+let audioAt = 0;
+let audioPending = new Uint8Array(0);
+let micStream = null;
+let micNode = null;
+let hearReady = false;
 
 function connected() {
   return state.loggedIn && state.linked;
@@ -58,8 +64,14 @@ function renderStatus() {
   $("reply-line").textContent = `回复：${state.reply || "—"}`;
   if (auth) $("prompt-label").textContent = `${auth.username}@${auth.host}:~$`;
   else $("prompt-label").textContent = "$";
-  $("start-all").disabled = !online || starting;
-  if (!starting) $("start-all").textContent = "启动全部";
+  ["units", "vision", "map"].forEach((key) => {
+    const button = $(`start-${key}`);
+    const running = button.dataset.live === "1";
+    button.disabled = !online || starting[key];
+    button.classList.toggle("live", running && !starting[key]);
+    if (starting[key]) button.textContent = button.dataset.pending === "stop" ? "停止中" : "启动中";
+    else button.textContent = running ? "停止" : "启动";
+  });
 }
 
 const tts = { volume: 1, pitch: 1, rate: 1 };
@@ -118,8 +130,18 @@ function pickVoice() {
 function setWave() {
   wave.classList.toggle("off", !wantListen && !speaking);
   wave.classList.toggle("talk", speaking);
+  wave.classList.toggle("live", wantListen);
   wave.setAttribute("aria-pressed", wantListen ? "true" : "false");
   wave.setAttribute("aria-label", wantListen ? "停止说话" : "开始说话");
+}
+
+function showMicLevel(level) {
+  const bars = wave.querySelectorAll("span");
+  bars.forEach((bar, index) => {
+    const shape = 0.45 + 0.55 * Math.abs(Math.sin(index * 0.65));
+    const height = Math.max(8, Math.min(100, level * shape * 140));
+    bar.style.height = `${height}%`;
+  });
 }
 
 function speak(text) {
@@ -188,7 +210,10 @@ const world = {
   sheet: null,
   layout: null,
   trail: [],
+  uwb: null,
 };
+
+const UWB_STALE_MS = 2500;
 
 function cellColor(value) {
   if (value === 255) return [0x1c, 0x1c, 0x1c, 255];
@@ -337,6 +362,29 @@ function drawMap() {
     context.fillText("A", cx, cy - length * 0.85);
   }
 
+  const uwb = world.uwb;
+  if (uwb && uwb.ok && uwb.x !== null && uwb.y !== null && Date.now() - uwb.at < UWB_STALE_MS) {
+    const [ux, uy] = worldToCanvas(uwb.x, uwb.y, map, layout);
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 170);
+    const radius = Math.max(5.5 * ratio, (0.14 / map.res) * scale);
+    context.beginPath();
+    context.arc(ux, uy, radius * (1.6 + pulse * 0.7), 0, Math.PI * 2);
+    context.fillStyle = `rgba(160, 160, 160, ${(0.10 + 0.22 * pulse).toFixed(3)})`;
+    context.fill();
+    context.beginPath();
+    context.arc(ux, uy, radius, 0, Math.PI * 2);
+    context.fillStyle = `rgba(178, 178, 178, ${(0.45 + 0.5 * pulse).toFixed(3)})`;
+    context.fill();
+    context.strokeStyle = `rgba(236, 236, 236, ${(0.5 + 0.4 * pulse).toFixed(3)})`;
+    context.lineWidth = 1.4 * ratio;
+    context.stroke();
+    context.fillStyle = "rgba(242, 242, 242, 0.92)";
+    context.font = `${10 * ratio}px sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("UWB", ux, uy - radius - 9 * ratio);
+  }
+
   if (world.goal) {
     const [gx, gy] = worldToCanvas(world.goal.x, world.goal.y, map, layout);
     context.beginPath();
@@ -350,6 +398,43 @@ function drawMap() {
     context.textBaseline = "middle";
     context.fillText("B", gx, gy);
   }
+}
+
+let uwbBadgeTimer = null;
+
+function renderUwbBadge() {
+  const view = $("slam-view");
+  const host = view && view.parentElement;
+  if (!host) return;
+  let badge = $("uwb-badge");
+  if (!badge) {
+    if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    badge = document.createElement("div");
+    badge.id = "uwb-badge";
+    badge.style.cssText = [
+      "position:absolute", "left:10px", "bottom:8px", "z-index:4",
+      "font:11px/1.6 sans-serif", "padding:2px 9px", "border-radius:10px",
+      "background:rgba(0,0,0,0.45)", "color:#dcdcdc", "pointer-events:none",
+      "letter-spacing:.02em",
+    ].join(";");
+    host.appendChild(badge);
+  }
+  if (uwbBadgeTimer) {
+    clearTimeout(uwbBadgeTimer);
+    uwbBadgeTimer = null;
+  }
+  const uwb = world.uwb;
+  const fresh = uwb && uwb.ok && Date.now() - uwb.at < UWB_STALE_MS;
+  if (!fresh) {
+    badge.textContent = uwb && uwb.reason ? `UWB 无数据：${uwb.reason}` : "UWB 无数据";
+    badge.style.color = "#9a9a9a";
+    return;
+  }
+  badge.style.color = "#e8e8e8";
+  badge.textContent = uwb.x === null
+    ? `UWB ${uwb.dist.toFixed(2)}m · ${uwb.azimuth.toFixed(0)}°（车未定位）`
+    : `UWB ${uwb.dist.toFixed(2)}m · ${uwb.azimuth.toFixed(0)}° · ${uwb.side}`;
+  uwbBadgeTimer = setTimeout(renderUwbBadge, 1200);
 }
 
 function rememberMap(msg) {
@@ -385,6 +470,17 @@ function rememberMap(msg) {
   requestAnimationFrame(drawMap);
 }
 
+function hideMap() {
+  world.map = null;
+  world.sheet = null;
+  world.goal = null;
+  world.layout = null;
+  const canvas = $("slam-view");
+  canvas.hidden = true;
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+}
+
 function clearMap() {
   world.map = null;
   world.pose = null;
@@ -393,6 +489,8 @@ function clearMap() {
   world.sheet = null;
   world.layout = null;
   world.trail = [];
+  world.uwb = null;
+  renderUwbBadge();
   latestHost = null;
   hostHistory.length = 0;
   const canvas = $("slam-view");
@@ -494,9 +592,23 @@ function renderDebug() {
   ];
   $("debug-facts").innerHTML = facts.map(([key, value]) => `<dt>${key}</dt><dd>${value}</dd>`).join("");
   const procs = host && Array.isArray(host.procs) ? host.procs : [];
-  $("debug-procs").innerHTML = procs.length
-    ? procs.map((proc) => `<li><span>${proc.name}</span><span>${proc.cpu == null ? "—" : `${Number(proc.cpu).toFixed(1)}%`} · ${proc.rss} MiB</span></li>`).join("")
-    : "<li><span>还没有进程采样</span><span></span></li>";
+  $("debug-procs").replaceChildren();
+  if (!procs.length) {
+    const empty = document.createElement("li");
+    empty.textContent = "还没有进程采样";
+    $("debug-procs").append(empty);
+  } else {
+    for (const proc of procs) {
+      const row = document.createElement("li");
+      const name = document.createElement("span");
+      const value = document.createElement("span");
+      name.textContent = proc.name;
+      const share = proc.cpu == null ? "—" : `${Number(proc.cpu).toFixed(1)}%`;
+      value.textContent = proc.rss == null ? share : `${share} · ${proc.rss} MiB`;
+      row.append(name, value);
+      $("debug-procs").append(row);
+    }
+  }
   if (!debugOn) return;
   drawSeries($("cpu-chart"), hostHistory.map((item) => item.cpu));
   drawSeries($("mem-chart"), hostHistory.map((item) => item.mem));
@@ -541,6 +653,52 @@ function onLiveMessage(msg) {
     speak(msg.text);
     return;
   }
+  if (msg.type === "command") {
+    if (msg.ok && msg.applied) state.reply = `小车执行：${msg.name || msg.command}`;
+    else if (msg.text) state.reply = `听到：${msg.text}`;
+    else state.reply = msg.reason || "小车没有执行";
+    renderStatus();
+    return;
+  }
+  if (msg.type === "audio") {
+    if (msg.ok) {
+      if (!state.reply) state.reply = "点波形开始听你说话";
+    } else {
+      state.reply = msg.reason || "小车的回答没有接上";
+    }
+    renderStatus();
+    return;
+  }
+  if (msg.type === "speak" && msg.wav) {
+    state.reply = `小车说：${msg.text || ""}`;
+    renderStatus();
+    playReplyWav(msg.wav);
+    return;
+  }
+  if (msg.type === "heard") {
+    if (msg.ready) {
+      hearReady = true;
+      state.reply = "正在听。你说的话会显示在这里";
+      renderStatus();
+      return;
+    }
+    if (msg.reason) {
+      state.reply = msg.reason;
+      renderStatus();
+      return;
+    }
+    if (msg.unclear) {
+      state.reply = "没听清，请再说一次";
+      renderStatus();
+      return;
+    }
+    if (msg.text) {
+      state.voice = msg.text;
+      state.reply = msg.final ? `听到：${msg.text}` : `听到：${msg.text}`;
+      renderStatus();
+    }
+    return;
+  }
   if (msg.type === "camera" && msg.jpeg) {
     showFrame("camera-view", msg.jpeg, "image/jpeg");
     return;
@@ -560,13 +718,31 @@ function onLiveMessage(msg) {
     if (world.map) drawMap();
     return;
   }
+  if (msg.type === "uwb") {
+    world.uwb = { ...msg, at: Date.now() };
+    renderUwbBadge();
+    if (world.map) drawMap();
+    return;
+  }
   if (msg.type === "launch") {
     const session = sessions[active];
     if (msg.line) {
       session.lines.push(msg.line);
       if (session.lines.length > 300) session.lines.splice(0, session.lines.length - 300);
     }
-    if (msg.done) starting = false;
+    const target = msg.target;
+    if (msg.done && target && Object.prototype.hasOwnProperty.call(starting, target)) {
+      starting[target] = false;
+      const button = $(`start-${target}`);
+      delete button.dataset.pending;
+      if (msg.ok && msg.action === "stop") {
+        delete button.dataset.live;
+        if (target === "vision") clearFrame("camera-view");
+        if (target === "map") hideMap();
+      } else if (msg.ok) {
+        button.dataset.live = "1";
+      }
+    }
     renderTabs();
     renderStatus();
     return;
@@ -577,7 +753,17 @@ function onLiveMessage(msg) {
 }
 
 function dropLink(message) {
-  starting = false;
+  if (wantListen) stopListening();
+  starting.units = false;
+  starting.vision = false;
+  starting.map = false;
+  ["units", "vision", "map"].forEach((key) => {
+    const button = $(`start-${key}`);
+    delete button.dataset.live;
+    delete button.dataset.pending;
+    button.classList.remove("live");
+    button.textContent = "启动";
+  });
   state.loggedIn = false;
   state.linked = false;
   state.speed = null;
@@ -607,79 +793,144 @@ function dropLink(message) {
   renderTabs();
 }
 
+let replyNode = null;
+
+function playReplyWav(b64) {
+  if (!audioCtx) audioCtx = new AudioContext();
+  const resume = audioCtx.state === "suspended" ? audioCtx.resume() : Promise.resolve();
+  resume.then(() => {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return audioCtx.decodeAudioData(bytes.buffer.slice(0));
+  }).then((buffer) => {
+    if (replyNode) {
+      try { replyNode.stop(); } catch (_) {}
+    }
+    const source = audioCtx.createBufferSource();
+    replyNode = source;
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    source.start();
+  }).catch(() => {
+    state.reply = "这句回答没有播出来";
+    renderStatus();
+  });
+}
+
+function playCarAudio(bytes) {
+  const merged = new Uint8Array(audioPending.length + bytes.length);
+  merged.set(audioPending);
+  merged.set(bytes, audioPending.length);
+  const even = merged.length - (merged.length % 2);
+  audioPending = merged.slice(even);
+  if (even < 2) return;
+  if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  const samples = new Int16Array(merged.buffer, merged.byteOffset, even / 2);
+  const floats = new Float32Array(samples.length);
+  for (let i = 0; i < samples.length; i += 1) floats[i] = samples[i] / 32768;
+  const buffer = audioCtx.createBuffer(1, floats.length, 16000);
+  buffer.getChannelData(0).set(floats);
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioCtx.destination);
+  const now = audioCtx.currentTime;
+  if (audioAt < now + 0.02) audioAt = now + 0.06;
+  source.start(audioAt);
+  audioAt += buffer.duration;
+  if (audioAt > now + 0.4) audioAt = now + 0.06;
+}
+
 function submitUtterance(text) {
   const line = text.trim();
   if (!line) return;
   spoken = "";
   state.voice = line;
+  state.reply = "正在交给小车";
   renderStatus();
-  const reply = replyFor(line);
   if (!sendLive({ type: "hear", text: line })) {
-    speak("未连接小车");
-    return;
-  }
-  lastSent = line;
-  const token = ++hearToken;
-  window.setTimeout(() => {
-    if (token !== hearToken) return;
-    sendLive({ type: "say", text: reply });
-    speak(reply);
-  }, 1600);
-}
-
-function setupRecognition() {
-  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Ctor) return;
-  recognition = new Ctor();
-  recognition.lang = "zh-CN";
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.onresult = (event) => {
-    let text = "";
-    let finalResult = false;
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
-      text += event.results[i][0].transcript;
-      if (event.results[i].isFinal) finalResult = true;
-    }
-    const line = text.trim();
-    if (!line) return;
-    if (!finalResult) {
-      state.voice = line;
-      renderStatus();
-      return;
-    }
-    submitUtterance(line);
-  };
-  recognition.onerror = (event) => {
-    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-      wantListen = false;
-      state.reply = "没有拿到麦克风";
-      renderStatus();
-      setWave();
-    }
-  };
-  recognition.onend = () => {
-    if (wantListen && !speaking) startRecognition();
-  };
-}
-
-function startRecognition() {
-  if (!recognition || speaking) return;
-  try { recognition.start(); } catch (_) {}
-}
-
-wave.addEventListener("click", () => {
-  if (!recognition) {
-    state.reply = "这台浏览器不能识别语音，可以在下面输入";
+    state.reply = "未连接小车";
     renderStatus();
     return;
   }
-  wantListen = !wantListen;
+  lastSent = line;
+  hearToken += 1;
+}
+
+function stopListening() {
+  wantListen = false;
+  hearReady = false;
   setWave();
-  if (wantListen) startRecognition();
-  else {
-    try { recognition.stop(); } catch (_) {}
+  sendLive({ type: "car-audio", on: false });
+  if (micStream) micStream.getTracks().forEach((track) => track.stop());
+  micStream = null;
+  if (micNode) {
+    try { micNode.disconnect(); } catch (_) {}
   }
+  micNode = null;
+  wave.querySelectorAll("span").forEach((bar) => {
+    bar.style.height = "";
+  });
+}
+
+async function startMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error("no-mic");
+  }
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
+  });
+  micStream = stream;
+  if (!audioCtx) audioCtx = new AudioContext();
+  await audioCtx.resume();
+  const source = audioCtx.createMediaStreamSource(stream);
+  const node = audioCtx.createScriptProcessor(4096, 1, 1);
+  const mute = audioCtx.createGain();
+  mute.gain.value = 0;
+  node.onaudioprocess = (event) => {
+    const input = event.inputBuffer.getChannelData(0);
+    let energy = 0;
+    for (let i = 0; i < input.length; i += 1) energy += input[i] * input[i];
+    showMicLevel(Math.sqrt(energy / input.length) * 12);
+    if (!wantListen || !hearReady || !live || live.readyState !== WebSocket.OPEN) return;
+    const ratio = audioCtx.sampleRate / 16000;
+    const count = Math.floor(input.length / ratio);
+    const pcm = new Int16Array(count);
+    for (let i = 0; i < count; i += 1) {
+      const sample = input[Math.min(input.length - 1, Math.floor(i * ratio))];
+      pcm[i] = Math.max(-1, Math.min(1, sample)) * 0x7fff;
+    }
+    try { live.send(pcm.buffer); } catch (_) {}
+  };
+  source.connect(node);
+  node.connect(mute);
+  mute.connect(audioCtx.destination);
+  micNode = node;
+}
+
+wave.addEventListener("click", async () => {
+  if (wantListen) {
+    stopListening();
+    return;
+  }
+  if (!connected()) {
+    state.reply = "未连接小车";
+    renderStatus();
+    return;
+  }
+  try {
+    await startMic();
+  } catch (_) {
+    state.reply = "没有拿到麦克风，请允许浏览器使用麦克风";
+    renderStatus();
+    return;
+  }
+  wantListen = true;
+  setWave();
+  state.reply = "正在准备识别";
+  renderStatus();
+  sendLive({ type: "car-audio", on: true });
 });
 
 $("say-form").addEventListener("submit", (event) => {
@@ -692,7 +943,6 @@ $("say-form").addEventListener("submit", (event) => {
 });
 
 if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => pickVoice();
-setupRecognition();
 
 const sessions = [];
 let active = 0;
@@ -858,15 +1108,43 @@ new ResizeObserver(() => {
   if (debugOn) renderDebug();
 }).observe($("debug-board"));
 
-$("start-all").addEventListener("click", () => {
-  if (!connected() || !live || starting) return;
-  starting = true;
-  $("start-all").disabled = true;
-  $("start-all").textContent = "启动中";
+const launchNotes = {
+  units: {
+    start: "正在启动还没运行的底盘、语音和跟随雷达。已经在跑的不会重新启动。",
+    stop: "正在停止底盘、语音、跟随雷达和语音行驶。",
+  },
+  vision: {
+    start: "正在启动相机和目标检测。建图不会一起启动。",
+    stop: "正在停止相机和目标检测，并停止订阅画面。",
+  },
+  map: {
+    start: "正在启动建图。相机不会一起启动。",
+    stop: "正在停止建图，并停止订阅地图。",
+  },
+};
+
+function launchService(target, action) {
+  if (!connected() || !live || starting[target]) return;
+  const button = $(`start-${target}`);
+  const running = button.dataset.live === "1";
+  if (action === "stop" ? !running : running) return;
+  starting[target] = true;
+  button.dataset.pending = action;
+  renderStatus();
   const session = sessions[active];
-  session.lines.push("正在按小车现有服务启动还没运行的功能。已在运行的不会重新启动。");
+  session.lines.push(launchNotes[target][action]);
   renderTabs();
-  live.send(JSON.stringify({ type: "launch" }));
+  live.send(JSON.stringify({ type: "launch", target, action }));
+}
+
+$("start-units").addEventListener("click", () => {
+  launchService("units", $("start-units").dataset.live === "1" ? "stop" : "start");
+});
+$("start-vision").addEventListener("click", () => {
+  launchService("vision", $("start-vision").dataset.live === "1" ? "stop" : "start");
+});
+$("start-map").addEventListener("click", () => {
+  launchService("map", $("start-map").dataset.live === "1" ? "stop" : "start");
 });
 $("login-close").addEventListener("click", closeLogin);
 $("login-layer").addEventListener("click", (event) => {
@@ -891,7 +1169,10 @@ $("login-form").addEventListener("submit", (event) => {
   }
   status.className = "login-status";
   status.textContent = "正在连接小车…";
+  if (!audioCtx) audioCtx = new AudioContext();
+  audioCtx.resume();
   const ws = new WebSocket(wsUrl("/live"));
+  ws.binaryType = "arraybuffer";
   let settled = false;
   const timer = window.setTimeout(() => {
     if (settled) return;
@@ -904,6 +1185,10 @@ $("login-form").addEventListener("submit", (event) => {
     ws.send(JSON.stringify({ type: "login", host, username, password }));
   };
   ws.onmessage = (ev) => {
+    if (ev.data instanceof ArrayBuffer) {
+      playCarAudio(new Uint8Array(ev.data));
+      return;
+    }
     const msg = JSON.parse(ev.data);
     if (msg.type === "login") {
       window.clearTimeout(timer);
@@ -918,7 +1203,7 @@ $("login-form").addEventListener("submit", (event) => {
       live = ws;
       state.loggedIn = true;
       state.linked = true;
-      $("user-name").textContent = username;
+      $("user-name").textContent = "技术统筹部";
       status.className = "login-status ok";
       status.textContent = "已连上小车。可以关闭这个窗口。";
       $("logout").hidden = false;

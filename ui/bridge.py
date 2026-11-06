@@ -19,13 +19,14 @@ import os
 import sys
 import threading
 import time
+from datetime import datetime
 
 os.environ.setdefault("RCUTILS_LOGGING_SEVERITY", "WARN")
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from nav_msgs.msg import OccupancyGrid, Odometry
 from sensor_msgs.msg import CompressedImage, Image, Range
 from std_msgs.msg import Float32, String
@@ -50,6 +51,13 @@ MAP_QOS = QoSProfile(
     history=HistoryPolicy.KEEP_LAST,
     depth=1,
 )
+CAM_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+CAMERA_INTERVAL = 1.0
+MAP_INTERVAL = 3.0
 
 
 def emit(payload):
@@ -58,14 +66,34 @@ def emit(payload):
 
 
 ULTRA_FRAMES = [f"ultrasonic_data_{name}" for name in "ABCDEF"]
-HOST_PROCS = (
+PROC_LABELS = (
     ("建图", "rtabmap_slam/rtabmap"),
     ("图像同步", "rgbd_sync"),
-    ("相机", "astra_camera_node"),
-    ("桥接", "baic-hmi/bridge.py"),
-    ("底盘", "wheeltec_robot_node"),
-    ("语音", "robot-voice-visual.py"),
+    ("相机", "astra_camera"),
+    ("界面", "baic-hmi/bridge.py"),
+    ("底盘", "wheeltec_robot"),
+    ("语音", "robot-voice-visual"),
+    ("速度仲裁", "robot-voice-uwb.py"),
+    ("旧仲裁", "legacy-voice-arbiter"),
+    ("跟随规划", "robot-uwb-follow.py"),
+    ("跟随激光", "robot-follow-scan.py"),
+    ("目标跟踪", "robot-bag-tracker"),
+    ("激光雷达", "lslidar_driver"),
+    ("平面激光", "pointcloud_to_laserscan"),
+    ("里程计", "ekf_node"),
 )
+
+
+def proc_label(command, comm):
+    for name, needle in PROC_LABELS:
+        if needle in command:
+            return name
+    parts = command.split()
+    script = next((os.path.basename(part) for part in parts[1:] if part.endswith(".py")), "")
+    if script:
+        return script
+    base = os.path.basename(parts[0]) if parts else comm
+    return base or comm or "进程"
 
 
 def yaw_of(rotation):
@@ -105,6 +133,10 @@ class Bridge(Node):
         self.have_compressed = False
         self.last_cam = 0.0
         self.last_map = 0.0
+        self.cam_sub = None
+        self.raw_sub = None
+        self.map_sub = None
+        self.camera_armed_at = 0.0
         self.map_stamp = None
         self.ranges = {}
         self.map_wh = None
@@ -122,10 +154,6 @@ class Bridge(Node):
         self.create_subscription(Float32, "/PowerVoltage", self.on_voltage, 10)
         self.create_subscription(String, "/voice_words", self.on_voice, 10)
         self.create_subscription(String, "/feedback_words", self.on_feedback, 10)
-        self.create_subscription(CompressedImage, "/camera/color/image_raw/compressed", self.on_compressed, qos_profile_sensor_data)
-        if self.cv_bridge is not None:
-            self.create_subscription(Image, "/camera/color/image_raw", self.on_raw, qos_profile_sensor_data)
-        self.create_subscription(OccupancyGrid, "/map", self.on_map, MAP_QOS)
         for frame in ULTRA_FRAMES:
             self.create_subscription(Range, f"/{frame}", self.on_range, 10)
         self.hear_pub = self.create_publisher(String, "/voice_words", 10)
@@ -135,6 +163,51 @@ class Bridge(Node):
 
     def mark(self, key):
         self.seen[key] = time.time()
+
+    def arm_camera(self):
+        if self.cam_sub is not None:
+            return
+        self.camera_armed_at = time.time()
+        self.cam_sub = self.create_subscription(
+            CompressedImage,
+            "/camera/color/image_raw/compressed",
+            self.on_compressed,
+            CAM_QOS,
+        )
+
+    def arm_raw_camera(self):
+        if self.raw_sub is not None or self.cam_sub is None or self.have_compressed or self.cv_bridge is None:
+            return
+        if time.time() - self.camera_armed_at < 3.0:
+            return
+        self.raw_sub = self.create_subscription(
+            Image,
+            "/camera/color/image_raw",
+            self.on_raw,
+            CAM_QOS,
+        )
+
+    def arm_map(self):
+        if self.map_sub is not None:
+            return
+        self.map_sub = self.create_subscription(OccupancyGrid, "/map", self.on_map, MAP_QOS)
+
+    def disarm_camera(self):
+        if self.cam_sub is not None:
+            self.destroy_subscription(self.cam_sub)
+            self.cam_sub = None
+        if self.raw_sub is not None:
+            self.destroy_subscription(self.raw_sub)
+            self.raw_sub = None
+        self.have_compressed = False
+        self.last_cam = 0.0
+
+    def disarm_map(self):
+        if self.map_sub is not None:
+            self.destroy_subscription(self.map_sub)
+            self.map_sub = None
+        self.map_stamp = None
+        self.last_map = 0.0
 
     def on_odom(self, msg):
         linear = msg.twist.twist.linear
@@ -159,7 +232,7 @@ class Bridge(Node):
 
     def send_jpeg(self, blob):
         now = time.time()
-        if now - self.last_cam < 0.2:
+        if now - self.last_cam < CAMERA_INTERVAL:
             return
         if not blob or len(blob) > 500000:
             return
@@ -236,10 +309,10 @@ class Bridge(Node):
         now = time.time()
         info = msg.info
         stamp = (info.width, info.height, msg.header.stamp.sec, msg.header.stamp.nanosec)
-        if stamp == self.map_stamp and now - self.last_map < 2.0:
+        if stamp == self.map_stamp and now - self.last_map < MAP_INTERVAL:
             self.mark("map")
             return
-        if now - self.last_map < 1.0:
+        if now - self.last_map < MAP_INTERVAL:
             self.mark("map")
             return
         try:
@@ -269,6 +342,47 @@ class Bridge(Node):
             "grid": base64.b64encode(raw).decode("ascii"),
         })
 
+    def voice_ready(self):
+        # The live recognizer does not publish /voice_words. It is healthy when
+        # robot-voice-visual.py is the recognition-only process and its log
+        # still shows a fresh microphone block.
+        try:
+            pid = int(open("/home/wheeltec/robot_voice/recognition.pid", encoding="utf-8").read().strip())
+            command = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\0", b" ").decode("utf-8", "replace")
+        except (OSError, ValueError):
+            return False
+        if "robot-voice-visual.py" not in command or " --execute" in f" {command} ":
+            return False
+        try:
+            with open("/home/wheeltec/robot_voice/voice-stable-live.log", "rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                handle.seek(max(0, handle.tell() - 12000))
+                tail = handle.read().decode("utf-8", "replace")
+        except OSError:
+            return False
+        now = time.time()
+        for line in reversed(tail.splitlines()):
+            if "audio_age_s" not in line:
+                continue
+            try:
+                item = json.loads(line)
+                stamp = datetime.fromisoformat(item["utc"]).timestamp()
+                audio = item.get("audio_age_s")
+                blocks = item.get("audio_blocks")
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                continue
+            age = now - stamp
+            return (
+                0 <= age < 8
+                and item.get("execute") is False
+                and isinstance(audio, (int, float))
+                and math.isfinite(audio)
+                and 0 <= audio < 1
+                and isinstance(blocks, int)
+                and blocks > 0
+            )
+        return False
+
     def others(self, topic):
         try:
             infos = self.get_publishers_info_by_topic(topic)
@@ -289,6 +403,17 @@ class Bridge(Node):
             queued = self.pending
             self.pending = []
         for item in queued:
+            if item.get("op") in ("watch", "unwatch"):
+                target = item.get("target")
+                if item.get("op") == "watch" and target == "camera":
+                    self.arm_camera()
+                elif item.get("op") == "watch" and target == "map":
+                    self.arm_map()
+                elif item.get("op") == "unwatch" and target == "camera":
+                    self.disarm_camera()
+                elif item.get("op") == "unwatch" and target == "map":
+                    self.disarm_map()
+                continue
             text = str(item.get("text") or "").strip()
             if not text:
                 continue
@@ -298,6 +423,7 @@ class Bridge(Node):
                 self.hear_pub.publish(message)
             elif item.get("op") == "say":
                 self.say_pub.publish(message)
+        self.arm_raw_camera()
 
         fault = ""
         checks = (
@@ -305,12 +431,15 @@ class Bridge(Node):
             ("相机", "/camera/color/image_raw", "camera", 3.0),
             ("超声波", "/ultrasonic_data_A", "ultra", None),
             ("SLAM", "/map", "map", 8.0),
-            ("语音", "/voice_words", "voice", None),
+            ("语音", "", "voice", None),
         )
         for label, topic, key, stale in checks:
             if label == "语音":
-                alive = self.others("/voice_words") > 0 or self.others("/feedback_words") > 0
-                bad = not alive
+                bad = not self.voice_ready()
+            elif label == "相机" and self.cam_sub is None:
+                bad = False
+            elif label == "SLAM" and self.map_sub is None:
+                bad = False
             elif label == "SLAM":
                 bad = self.others("/map") <= 0 or self.seen.get("map", 0) == 0
             else:
@@ -337,6 +466,7 @@ class Bridge(Node):
         cpu = None
         if self.host_cpu and total > self.host_cpu[1]:
             cpu = 100.0 * (1.0 - (idle - self.host_cpu[0]) / (total - self.host_cpu[1]))
+            cpu = round(max(0.0, min(100.0, cpu)), 1)
         self.host_cpu = (idle, total)
 
         mem = {}
@@ -356,43 +486,46 @@ class Bridge(Node):
         now = time.time()
         elapsed = None if self.host_proc_at is None else now - self.host_proc_at
         clk = os.sysconf("SC_CLK_TCK")
+        cores = max(1, os.cpu_count() or 1)
+        page = os.sysconf("SC_PAGE_SIZE") // 1024
         found = {}
         ticks_now = {}
         for pid in os.listdir("/proc"):
             if not pid.isdigit():
                 continue
             try:
-                command = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\0", b" ").decode("utf-8", "replace")
                 stat = open(f"/proc/{pid}/stat", encoding="ascii", errors="replace").read()
                 rest = stat[stat.rfind(")") + 2:].split()
                 ticks = int(rest[11]) + int(rest[12])
             except (OSError, IndexError, ValueError):
                 continue
-            label = next((name for name, needle in HOST_PROCS if needle in command), None)
-            if label is None:
-                continue
-            rss = 0
-            try:
-                for line in open(f"/proc/{pid}/status", encoding="ascii"):
-                    if line.startswith("VmRSS:"):
-                        rss = int(line.split()[1])
-                        break
-            except OSError:
-                rss = 0
-            previous = self.host_proc.get(pid)
-            proc_cpu = None
-            if previous is not None and elapsed and elapsed > 0:
-                proc_cpu = (ticks - previous) / clk / elapsed * 100.0
             ticks_now[pid] = ticks
-            current = found.get(label)
-            if current is None or rss > current["rss"]:
-                found[label] = {
-                    "name": label,
-                    "cpu": None if proc_cpu is None else round(max(0.0, proc_cpu), 1),
-                    "rss": round(rss / 1024.0),
-                }
+            previous = self.host_proc.get(pid)
+            if previous is None or not elapsed or elapsed <= 0 or clk <= 0:
+                continue
+            share = (ticks - previous) / clk / elapsed * 100.0 / cores
+            if share < 0.4:
+                continue
+            try:
+                command = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\0", b" ").decode("utf-8", "replace")
+                rss_pages = int(open(f"/proc/{pid}/statm", encoding="ascii").read().split()[1])
+            except (OSError, IndexError, ValueError):
+                command, rss_pages = "", 0
+            comm = stat[stat.find("(") + 1:stat.rfind(")")]
+            label = proc_label(command, comm)
+            bucket = found.setdefault(label, {"name": label, "cpu": 0.0, "rss": 0})
+            bucket["cpu"] += share
+            bucket["rss"] += rss_pages * page
         self.host_proc = ticks_now
         self.host_proc_at = now
+        procs = sorted(found.values(), key=lambda item: item["cpu"], reverse=True)[:12]
+        for item in procs:
+            item["cpu"] = round(item["cpu"], 1)
+            item["rss"] = round(item["rss"] / 1024.0)
+        if cpu is not None and procs:
+            rest = round(max(0.0, cpu - sum(item["cpu"] for item in procs)), 1)
+            if rest >= 0.4:
+                procs.append({"name": "其余", "cpu": rest, "rss": None})
         pose = None
         if self.pose_state:
             pose = {"x": self.pose_state[0], "y": self.pose_state[1], "yaw": self.pose_state[2]}
@@ -401,14 +534,14 @@ class Bridge(Node):
             grid = {"w": self.map_wh[0], "h": self.map_wh[1], "res": self.map_wh[2]}
         return {
             "type": "host",
-            "cpu": None if cpu is None else round(max(0.0, min(100.0, cpu)), 1),
+            "cpu": cpu,
             "cores": os.cpu_count() or 0,
             "load": load,
             "mem_used": round(total_mib - avail_mib),
             "mem_total": round(total_mib),
             "uptime": uptime,
             "temp": None if temp is None else round(temp, 1),
-            "procs": list(found.values()),
+            "procs": procs,
             "pose": pose,
             "map": grid,
         }
@@ -427,7 +560,7 @@ def stdin_loop(node):
             item = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if item.get("op") in ("hear", "say"):
+        if item.get("op") in ("watch", "unwatch", "hear", "say"):
             node.enqueue(item)
 
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BAIC 车辆界面</title>
+    <title>UI_Latest_20261104</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="voice.css" />
   </head>
@@ -13,7 +13,6 @@
         <img class="logo" src="设计稿/baic-logo.png" alt="BAIC" />
         <div class="top-actions">
           <button class="start-all" id="debug-open" type="button" aria-pressed="false">调试</button>
-          <button class="start-all" id="start-all" type="button" disabled title="启动还没运行的相机、目标检测和建图。已经在跑的底盘和语音不会重新启动。">启动全部</button>
           <button class="user" id="user-btn" type="button" aria-haspopup="dialog">
           <span class="avatar" aria-hidden="true">
             <svg viewBox="0 0 24 24">
@@ -28,6 +27,7 @@
 
       <main class="board" id="drive-board">
         <section class="card status" aria-label="车辆基本信息">
+          <button class="panel-start" id="start-units" type="button" disabled title="启动或停止底盘、语音、跟随雷达和语音行驶">启动</button>
           <div class="metric">
             <span class="k">车速</span>
             <strong id="speed">-- <small>m/s</small></strong>
@@ -53,7 +53,10 @@
 
         <div class="center">
           <section class="card vision" aria-label="车辆视觉">
-            <h2>车辆视觉</h2>
+            <div class="card-head">
+              <h2>车辆视觉</h2>
+              <button class="panel-start" id="start-vision" type="button" disabled title="启动或停止相机和目标检测。画面每秒一帧，停止后不再订阅">启动</button>
+            </div>
             <div class="fit">
               <div class="frame">
                 <img id="camera-view" alt="RGB相机" hidden />
@@ -78,7 +81,10 @@
         </div>
 
         <section class="card mapcard" aria-label="周围环境">
-          <h2>周围环境</h2>
+          <div class="card-head">
+            <h2>周围环境</h2>
+              <button class="panel-start" id="start-map" type="button" disabled title="启动或停止建图。地图每 3 秒一帧，停止后不再订阅">启动</button>
+          </div>
           <div class="fit">
             <canvas class="slam" id="slam-view" aria-label="俯视图，点击空地设定终点" hidden></canvas>
           </div>
@@ -87,7 +93,7 @@
       <main class="board debug-board" id="debug-board" hidden>
         <section class="card debug-meters" aria-label="实时占用">
           <div class="metric">
-            <span class="k">算力</span>
+            <span class="k">CPU负载</span>
             <strong id="cpu-now">-- <small>%</small></strong>
           </div>
           <p class="debug-sub" id="cpu-sub">登录后显示车上的占用</p>
@@ -100,7 +106,7 @@
         <section class="card debug-charts" aria-label="占用曲线">
           <h2>最近 60 秒</h2>
           <div class="chart-block">
-            <span>算力 %</span>
+            <span>CPU %</span>
             <canvas id="cpu-chart"></canvas>
           </div>
           <div class="chart-block">
@@ -111,7 +117,7 @@
         <section class="card debug-detail" aria-label="车辆详情">
           <h2>车辆</h2>
           <dl id="debug-facts"></dl>
-          <h2>进程</h2>
+          <h2>CPU构成</h2>
           <ul id="debug-procs"></ul>
         </section>
       </main>
@@ -135,6 +141,6 @@
         </form>
       </div>
     </div>
-    <script src="voice.js?v=5"></script>
+    <script src="voice.js?v=15"></script>
   </body>
 </html>
